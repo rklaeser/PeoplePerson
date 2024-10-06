@@ -2,6 +2,13 @@
 	import Counter from './Counter.svelte';
 	import welcome from '$lib/images/svelte-welcome.webp';
 	import welcome_fallback from '$lib/images/svelte-welcome.png';
+	import FriendTable from './FriendTable.svelte';
+
+	const data = [
+		{ name: 'Alice', age: 28, city: 'New York' },
+		{ name: 'Bob', age: 34, city: 'Los Angeles' },
+		{ name: 'Charlie', age: 22, city: 'Chicago' }
+	];
 </script>
 
 <svelte:head>
@@ -20,12 +27,9 @@
 
 		to your new<br />SvelteKit app
 	</h1>
-
-	<h2>
-		try editing <strong>src/routes/+page.svelte</strong>
-	</h2>
-	<h3>Reed confirming he can edit</h3>
-	<Counter />
+</section>
+<section>
+	<FriendTable {data} />
 </section>
 
 <style>
