@@ -24,7 +24,7 @@
 	<h2>
 		try editing <strong>src/routes/+page.svelte</strong>
 	</h2>
-
+	<h3>Reed confirming he can edit</h3>
 	<Counter />
 </section>
 
