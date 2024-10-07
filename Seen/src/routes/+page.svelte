@@ -3,12 +3,20 @@
 	import welcome from '$lib/images/svelte-welcome.webp';
 	import welcome_fallback from '$lib/images/svelte-welcome.png';
 	import FriendTable from './FriendTable.svelte';
+	import { peopleStore, addPerson, removePerson, updatePerson } from '$lib/stores/peopleStore';
+	import { onDestroy } from 'svelte';
 
-	const data = [
-		{ name: 'Alice', age: 28, city: 'New York' },
-		{ name: 'Bob', age: 34, city: 'Los Angeles' },
-		{ name: 'Charlie', age: 22, city: 'Chicago' }
-	];
+	let people = [];
+
+	// Subscribe to the store
+	const unsubscribe = peopleStore.subscribe((value) => {
+		people = value;
+	});
+
+	// Clean up the subscription when the component is destroyed
+	onDestroy(() => {
+		unsubscribe();
+	});
 </script>
 
 <link rel="stylesheet" href="/src/tailwind.css" />
@@ -31,7 +39,7 @@
 	</h1>
 </section>
 <section>
-	<FriendTable {data} />
+	<FriendTable {people} />
 </section>
 
 <style>
