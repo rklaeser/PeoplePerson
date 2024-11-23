@@ -1,22 +1,5 @@
 <script>
-	import Counter from './Counter.svelte';
-	import welcome from '$lib/images/svelte-welcome.webp';
-	import welcome_fallback from '$lib/images/svelte-welcome.png';
-	import FriendTable from './FriendTable.svelte';
-	import { peopleStore, addFriend, removeFriend, updateFriend } from '$lib/stores/peopleStore';
-	import { onDestroy } from 'svelte';
-
-	let people = [];
-
-	// Subscribe to the store
-	const unsubscribe = peopleStore.subscribe((value) => {
-		people = value;
-	});
-
-	// Clean up the subscription when the component is destroyed
-	onDestroy(() => {
-		unsubscribe();
-	});
+	export let data;
 </script>
 
 <link rel="stylesheet" href="/src/tailwind.css" />
@@ -27,7 +10,27 @@
 </svelte:head>
 
 <section>
-	<FriendTable {people} />
+	<table class="min-w-full bg-white border border-gray-300 shadow-md rounded-lg overflow-hidden">
+		<thead class="bg-gray-200">
+			<tr class="text-left text-gray-600">
+				<th class="py-3 px-4 border-b border-gray-300">ID</th>
+				<th class="py-3 px-4 border-b border-gray-300">Name</th>
+			</tr>
+		</thead>
+		<tbody>
+			{#each data.people as person}
+				<tr class="hover:bg-gray-100">
+					<td class="py-2 px-4 border-b border-gray-300">{person.id}</td>
+					<td class="py-2 px-4 border-b border-gray-300">{person.name}</td>
+				</tr>
+			{/each}
+			{#if data.people.length === 0}
+				<tr>
+					<td colspan="2" class="text-center py-2 text-gray-500">No data available</td>
+				</tr>
+			{/if}
+		</tbody>
+	</table>
 </section>
 
 <style>
@@ -37,9 +40,5 @@
 		justify-content: center;
 		align-items: center;
 		flex: 0.6;
-	}
-
-	h1 {
-		width: 100%;
 	}
 </style>

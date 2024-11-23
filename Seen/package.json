@@ -11,7 +11,10 @@
 		"lint": "prettier --check . && eslint .",
 		"format": "prettier --write .",
 		"test:integration": "playwright test",
-		"test:unit": "vitest"
+		"test:unit": "vitest",
+		"generate-migrations": "drizzle-kit generate",
+		"studio": "drizzle-kit studio",
+		"migrate": "tsx ./src/lib/db/migrate"
 	},
 	"devDependencies": {
 		"@fontsource/fira-mono": "^5.0.0",
@@ -26,12 +29,14 @@
 		"eslint-config-prettier": "^9.1.0",
 		"eslint-plugin-svelte": "^2.36.0",
 		"globals": "^15.0.0",
+		"pg": "^8.13.1",
 		"postcss": "^8.4.47",
 		"prettier": "^3.1.1",
 		"prettier-plugin-svelte": "^3.1.2",
 		"svelte": "^4.2.7",
 		"svelte-check": "^4.0.0",
 		"tailwindcss": "^3.4.13",
+		"tsx": "^4.19.1",
 		"typescript": "^5.0.0",
 		"typescript-eslint": "^8.0.0",
 		"vite": "^5.0.3",
@@ -39,6 +44,11 @@
 	},
 	"type": "module",
 	"dependencies": {
+		"dotenv": "^16.4.5",
+		"drizzle-kit": "^0.28.1",
+		"drizzle-orm": "^0.36.4",
+		"postgres": "^3.4.4",
+		"postgres-js": "^0.1.0",
 		"svelte-table": "^0.6.3"
 	}
 }

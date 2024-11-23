@@ -20,6 +20,9 @@ interface Associate {
 	notes: string;
 }
 
+//const result = await db.execute('select 1');
+//console.log(result);
+
 // Initial data for the store
 const initialPeople: Friend[] = [
 	{
