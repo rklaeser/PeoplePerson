@@ -21,7 +21,10 @@ export async function load({ fetch }) {
       const name = data.get('name');
       if (name && typeof name === 'string') {
         try {
-          await db.insert(people).values({ name });
+          await db.insert(people).values({
+            name: name,
+            zip: 94117
+          });
           console.log('🚀 Person added:', name);
         } catch (error) {
           console.error('API POST Error:', error);

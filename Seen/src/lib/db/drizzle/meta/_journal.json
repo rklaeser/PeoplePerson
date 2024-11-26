@@ -8,6 +8,13 @@
       "when": 1732337915966,
       "tag": "0000_young_sentry",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1732591472774,
+      "tag": "0001_normal_talisman",
+      "breakpoints": true
     }
   ]
 }

@@ -17,14 +17,3 @@ export async function GET() {
   }
 }
 
-export async function POST(name: string) {
-  try{
-    await db.insert(people).values({name})
-    return new Response(null, {
-      status: 201 // Status code for "Created"
-  });
-  } catch(error) {
-  console.error('API POST Error');
-  return json({ error: error }, { status: 500 });
-  }
-};
