@@ -9,6 +9,7 @@
 
   let markdownContent = data.body;
   let editor: any;
+  let isEditing = false;
 
   async function initializeEditor() {
     if (editor) {
@@ -40,8 +41,18 @@
     }
   }
 
+  function toggleEdit() {
+    isEditing = !isEditing;
+    if (isEditing) {
+      initializeEditor();
+    }
+  }
+
   onMount(() => {
-    initializeEditor();
+    // Initialize editor if already in editing mode
+    if (isEditing) {
+      initializeEditor();
+    }
   });
 </script>
 
@@ -49,12 +60,18 @@
   <h1>{data.name}</h1>
   <p>{data.zip}</p>
   <p><strong>Friend Name:</strong> {data.name}</p>
-  <textarea id="markdown-editor"></textarea>
-  <form method="POST" action="?/update">
-    <input type="hidden" name="id" value={data.id}>
-    <input type="hidden" name="content" value={markdownContent}>
-    <button type="submit" class="bg-red-500 text-black px-4 py-2 rounded">Save</button>
-  </form>
+
+  {#if isEditing}
+    <textarea id="markdown-editor"></textarea>
+    <form method="POST" action="?/update">
+      <input type="hidden" name="id" value={data.id}>
+      <input type="hidden" name="content" value={markdownContent}>
+      <button type="submit" class="bg-red-500 text-black px-4 py-2 rounded">Save</button>
+    </form>
+  {:else}
+    <div>{@html markdownContent}</div>
+    <button on:click={toggleEdit} class="bg-blue-500 text-white px-4 py-2 rounded">Edit</button>
+  {/if}
 </section>
 
 <style>
