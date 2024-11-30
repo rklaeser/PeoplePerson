@@ -49,6 +49,7 @@
 		"drizzle-orm": "^0.36.4",
 		"postgres": "^3.4.4",
 		"postgres-js": "^0.1.0",
+		"snarkdown": "^2.0.0",
 		"svelte-table": "^0.6.3"
 	}
 }
