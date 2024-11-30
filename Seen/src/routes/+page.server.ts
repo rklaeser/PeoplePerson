@@ -23,7 +23,8 @@ export async function load({ fetch }) {
         try {
           await db.insert(people).values({
             name: name,
-            zip: 94117
+            zip: 94117,
+            body: '## Hello, world!'
           });
           console.log('🚀 Person added:', name);
         } catch (error) {

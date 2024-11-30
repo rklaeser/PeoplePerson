@@ -15,6 +15,13 @@
       "when": 1732591472774,
       "tag": "0001_normal_talisman",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1732996102422,
+      "tag": "0002_awesome_zodiak",
+      "breakpoints": true
     }
   ]
 }
