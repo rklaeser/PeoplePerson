@@ -2,26 +2,25 @@ import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import {db} from '$lib/db/client';
 import { people, associations, statusEnum } from '$lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { fail } from '@sveltejs/kit';
 
 
-export const load: PageServerLoad = async ({ params, url }) => {
-  const name = params.name;
-  const id = url.searchParams.get('id') as string;
-
-  console.log('🚀 Person fetched:', {name, id}); 
+export const load: PageServerLoad = async ({ params}) => {
+  const id = params.id;
+     
+  
   try{
         const personResult = await db.select().from(people).where(eq(people.id, id)).execute();
         const friend = personResult[0];
 
-        console.log('🚀 Person fetched:', friend.name);        
         // Fetch the associates
         const associatesResult = await db.select().from(associations)
                                             .innerJoin(people, eq(associations.associate_id, people.id))
                                             .where(eq(associations.primary_id, id))
                                             .execute();
       const associates = associatesResult.map(row => row.people);
+      console.log('🚀 Person fetched:', friend.name, );    
       return { friend, associates };
         }
     catch(error){
@@ -30,31 +29,6 @@ export const load: PageServerLoad = async ({ params, url }) => {
     } 
 };
 
-/*
-export const load = async ({ params }) => {
-  const id = params.id;
-
-  try {
-    // Fetch the primary person
-    const personResult = await db.select().from(people).where(eq(people.id, id)).execute();
-    const person = personResult[0];
-
-    // Fetch the associates
-    const associatesResult = await db.select()
-      .from(associations)
-      .innerJoin(people, eq(associations.associate_id, people.id))
-      .where(eq(associations.primary_id, id))
-      .execute();
-    const associates = associatesResult.map(row => row.people);
-
-    console.log("🚀 Person and associates fetched");
-    return { person, associates };
-  } catch (error) {
-    console.error('API GET Error:', error);
-    throw new Error('Failed to fetch person and associates');
-  }
-};
-*/
 export const actions = {
   update: async ({ request }) => {
     const data = await request.formData();
@@ -62,8 +36,8 @@ export const actions = {
     const zip = data.get('zip') as string;
     const intent = data.get('intent') as string;
     const content = data.get('content') as string;
+    console.log('🚀 Updating content:', { id, zip, intent, content });
 
-    //const allowedIntents = ['romantic', 'core', 'archive', 'new', 'invest'] as const;
     type IntentType = typeof statusEnum.enumValues[number];
     if (
       zip && !isNaN(Number(zip)) &&
@@ -139,7 +113,33 @@ export const actions = {
     console.error('API POST Error:', error);
     return fail(500, { error: 'Failed to create association' });
   }
-}
+},
+deleteAssociation: async ({ request }) => {
+  const data = await request.formData();
+  const primaryId = data.get('id') as string;
+  const associateId = data.get('associate') as string;
+  console.log('🚀 Deleting association:', { primaryId, associateId });
+
+  try {
+    await db.delete(associations)
+      .where(
+        and(
+          eq(associations.primary_id, primaryId),
+          eq(associations.associate_id, associateId)));
+    console.log('🚀 Association deleted from associatins:', { primaryId, associateId });
+  } catch (error) {
+    console.error('API POST Error:', error);
+    return fail(500, { error: 'Failed to delete association' });
+  }
+  try {
+    await db.delete(people).where(eq(people.id, associateId));
+    console.log('🚀 Associate deleted from people:', associateId);
+  }
+  catch (error) {
+    console.error('API POST Error:', error);
+    return fail(500, { error: 'Failed to delete associate' });
+  }
+},
 };
 
 

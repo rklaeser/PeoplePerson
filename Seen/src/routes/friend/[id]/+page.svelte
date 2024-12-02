@@ -5,19 +5,19 @@
   import snarkdown from 'snarkdown';
   import { goto } from '$app/navigation';
 
-  export const prerender = false;
+  //export const prerender = false;
 
   export let data: { friend: { id: string; name: string; zip: string; body: string; intent: string }, associates: { id: string; name: string; intent: string }[] };
 
   let markdownContent = data.friend.body;
-  let htmlContent = snarkdown(markdownContent);
+  let htmlContent = snarkdown(data.friend.body);
   let editor: any;
   let isEditing = false;
 
   let newName = '';
 
-  function navigateToFriend(name: string, id: string) {
-    goto(`/friend/${name}?id=${id}`);
+  function navigateToFriend(id: string) {
+    goto(`/friend/${id}`);
   }
 
   async function initializeEditor() {
@@ -30,7 +30,7 @@
 
       editor = new EasyMDE({
         element: document.getElementById('markdown-editor') as HTMLTextAreaElement,
-        initialValue: markdownContent,
+        initialValue: data.friend.body,
         autofocus: true,
         autosave: {
           enabled: true,
@@ -44,11 +44,11 @@
         }
       });
 
-      editor.value(markdownContent);
+      editor.value(data.friend.body);
 
       editor.codemirror.on('change', () => {
-        markdownContent = editor.value();
-        htmlContent = snarkdown(markdownContent);
+        data.friend.body = editor.value();
+        htmlContent = snarkdown(data.friend.body);
       });
 
       editor.codemirror.focus();
@@ -61,6 +61,10 @@
       initializeEditor();
     }
   }
+
+  // Reactive statement to update htmlContent when markdownContent changes
+  $: htmlContent = snarkdown(data.friend.body);
+
 
   onMount(() => {
     // Initialize editor if already in editing mode
@@ -82,6 +86,8 @@
   <h1 class="py-1 px-2 border-b border-gray-300">🌰{data.friend.name}🌰</h1>
   {:else if data.friend.intent === 'invest'}
   <h1 class="py-1 px-2 border-b border-gray-300">🌱{data.friend.name}🌱</h1>
+  {:else if data.friend.intent === 'associate'}
+  <h1 class="py-1 px-2 border-b border-gray-300">👥{data.friend.name}👥</h1>
   {:else}
   <h1 class="py-1 px-2 border-b border-gray-300">❓{data.friend.name}❓</h1>
   {/if}
@@ -89,17 +95,18 @@
   {#if isEditing}
     <form method="POST" action="?/update" class="form-style">
       <input type="hidden" name="id" value={data.friend.id}>
-      <input type="hidden" name="content" value={markdownContent}>
+      <input type="hidden" name="content" value={data.friend.body}>
       <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">Save</button>
       <br>
       <div class="field-container">
         <label for="status">Status</label>
         <select id="intent" name="intent" bind:value={data.friend.intent} class="border px-2 py-1 mb-2">
-          <option value="romantic">Romantic</option>
-          <option value="core">Core</option>
-          <option value="archive">Archive</option>
           <option value="new">New</option>
           <option value="invest">Invest</option>
+          <option value="core">Core</option>
+          <option value="romantic">Romantic</option>
+          <option value="archive">Archive</option>
+          <option value="associate">Associate</option>        
         </select>
       </div>
       <div class="field-container">
@@ -128,7 +135,12 @@
   <h2>Associates</h2>
   <ul>
     {#each data.associates as associate}
-    <button on:click={() => navigateToFriend(associate.name, associate.id)}>{associate.name}</button>
+    <button on:click={() => navigateToFriend(associate.id)}>{associate.name}</button>
+    <form method="POST" action="?/deleteAssociation" class="form-style">
+      <input type="hidden" name="id" value={data.friend.id}>
+      <input type="hidden" name="associate" value={associate.id}>
+      <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded">Delete</button>
+    </form>
     {/each}
   </ul>
 </section>

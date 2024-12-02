@@ -4,8 +4,8 @@
     export let data: { people: { id: string; name: string, intent: string }[] };
 
 
-	function navigateToFriend(name: string, id: string) {
-    goto(`/friend/${name}?id=${id}`);
+	function navigateToFriend(id: string) {
+    goto(`/friend/${id}`);
   }
 
   let newName = '';
@@ -52,7 +52,7 @@
 				</td>
 			  </tr>
 			{#each data.people as person}
-			<tr class="hover:bg-gray-100 cursor-pointer" on:click={() => navigateToFriend(person.name, person.id)}>
+			<tr class="hover:bg-gray-100 cursor-pointer" on:click={() => navigateToFriend(person.id)}>
 				{#if person.intent === 'romantic'}
 				<td class="py-2 px-4 border-b border-gray-300">🌸</td>
 			  {:else if person.intent === 'core'}

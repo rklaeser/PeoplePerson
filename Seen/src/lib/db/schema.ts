@@ -6,10 +6,10 @@ export const statusEnum = pgEnum('intent', ['romantic', 'core', 'archive', 'new'
 export const people = pgTable('people', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
-  zip: integer('zip'),
+  zip: integer('zip').notNull().default(0),
   created_at: timestamp('created_at').notNull().defaultNow(),
   updated_at: timestamp('updated_at').notNull().defaultNow().$onUpdate(() => new Date()),
-  body: text('body'),
+  body: text('body').notNull().$default(() => 'Add a description'), // Add body field with default value
   intent: statusEnum().notNull().default('new') // Add status field with default value 'new'
 });
 
