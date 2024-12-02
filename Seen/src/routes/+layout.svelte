@@ -11,7 +11,6 @@
 	</main>
 
 	<footer>
-		<p>an unused footer</p>
 	</footer>
 </div>
 

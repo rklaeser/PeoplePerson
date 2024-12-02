@@ -1,6 +1,6 @@
 {
-  "id": "0aee9bbb-6996-48b4-b642-1fe88d3775c6",
-  "prevId": "b063beff-bbaf-40d7-b414-7538d22d733d",
+  "id": "e907a806-fa4a-4967-b3b3-98af97946361",
+  "prevId": "b70f20c0-ba66-4f9b-ac1c-192557a795c0",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -26,6 +26,34 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "body": {
+          "name": "body",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "intent": {
+          "name": "intent",
+          "type": "intent",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'new'"
         }
       },
       "indexes": {},
@@ -37,7 +65,20 @@
       "isRLSEnabled": false
     }
   },
-  "enums": {},
+  "enums": {
+    "public.intent": {
+      "name": "intent",
+      "schema": "public",
+      "values": [
+        "romantic",
+        "core",
+        "archive",
+        "new",
+        "invest",
+        "associate"
+      ]
+    }
+  },
   "schemas": {},
   "sequences": {},
   "roles": {},

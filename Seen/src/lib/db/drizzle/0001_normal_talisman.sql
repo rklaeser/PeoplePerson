@@ -1,1 +1,0 @@
-ALTER TABLE "people" ADD COLUMN "zip" integer NOT NULL;

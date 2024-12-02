@@ -1,30 +1,36 @@
 import { db } from '$lib/db/client'; // Adjust the import according to your project structure
 import { people } from '$lib/db/schema'; // Import the schema
 import { fail } from '@sveltejs/kit';
-import { eq } from 'drizzle-orm';
+import { eq, ne, and } from 'drizzle-orm';
+import { json } from '@sveltejs/kit';
 
 
-export async function load({ fetch }) {
-	const res = await fetch('/api/people');
-	if (!res.ok) {
-	  throw new Error('Failed to fetch people');
-	}
-	const people = await res.json();
-	return {
-	  people
-	};
+export async function load() {
+	try {
+    // Use drizzle-orm to query the database
+    const result = await db.select().from(people)
+                                    .where(
+                                      and(
+                                        ne(people.intent, 'archive'), 
+                                        ne(people.intent, 'associate')
+                                      )).execute();
+    console.log("🚀 People fetched");  // Logs the query result
+    return { people: result };  // Return a plain object
+  } catch (error) {
+    console.error('API GET Error:', error);
+    throw new Error('Failed to fetch people');
+    }
   }
 
   export const actions = {
-    add: async ({ request }) => {
+    create: async ({ request }) => {
       const data = await request.formData();
       const name = data.get('name');
       if (name && typeof name === 'string') {
         try {
           await db.insert(people).values({
             name: name,
-            zip: 94117,
-            body: '## Hello, world!'
+            intent: 'new'
           });
           console.log('🚀 Person added:', name);
         } catch (error) {

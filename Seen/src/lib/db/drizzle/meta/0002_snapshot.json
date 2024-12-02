@@ -1,9 +1,76 @@
 {
-  "id": "d96e4300-f085-4348-a798-e6a4bc6be6bd",
-  "prevId": "0aee9bbb-6996-48b4-b642-1fe88d3775c6",
+  "id": "cb42a7c9-41b8-4001-824e-93213c9a3743",
+  "prevId": "e907a806-fa4a-4967-b3b3-98af97946361",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
+    "public.associations": {
+      "name": "associations",
+      "schema": "",
+      "columns": {
+        "primary_id": {
+          "name": "primary_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "associate_id": {
+          "name": "associate_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "associations_primary_id_people_id_fk": {
+          "name": "associations_primary_id_people_id_fk",
+          "tableFrom": "associations",
+          "tableTo": "people",
+          "columnsFrom": [
+            "primary_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "associations_associate_id_people_id_fk": {
+          "name": "associations_associate_id_people_id_fk",
+          "tableFrom": "associations",
+          "tableTo": "people",
+          "columnsFrom": [
+            "associate_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "associations_primary_id_associate_id_pk": {
+          "name": "associations_primary_id_associate_id_pk",
+          "columns": [
+            "primary_id",
+            "associate_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.people": {
       "name": "people",
       "schema": "",
@@ -34,11 +101,26 @@
           "notNull": true,
           "default": "now()"
         },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
         "body": {
           "name": "body",
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "intent": {
+          "name": "intent",
+          "type": "intent",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'new'"
         }
       },
       "indexes": {},
@@ -50,7 +132,20 @@
       "isRLSEnabled": false
     }
   },
-  "enums": {},
+  "enums": {
+    "public.intent": {
+      "name": "intent",
+      "schema": "public",
+      "values": [
+        "romantic",
+        "core",
+        "archive",
+        "new",
+        "invest",
+        "associate"
+      ]
+    }
+  },
   "schemas": {},
   "sequences": {},
   "roles": {},
