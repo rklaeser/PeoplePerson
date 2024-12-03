@@ -15,13 +15,13 @@
 		</svg>
 		<ul>
 			<li aria-current={$page.url.pathname === '/' ? 'page' : undefined}>
-				<a href="/">List</a>
+				<a href="/">Home</a>
 			</li>
 			<li aria-current={$page.url.pathname === '/map' ? 'page' : undefined}>
 				<a href="/map">Map</a>
 			</li>
-			<li aria-current={$page.url.pathname === '/search' ? 'page' : undefined}>
-				<a href="/search">Search</a>
+			<li aria-current={$page.url.pathname === '/todo' ? 'page' : undefined}>
+				<a href="/todo">ToDo</a>
 			</li>
 		</ul>
 		<svg viewBox="0 0 2 3" aria-hidden="true">

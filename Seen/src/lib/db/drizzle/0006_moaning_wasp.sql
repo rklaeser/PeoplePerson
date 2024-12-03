@@ -1,0 +1,1 @@
+ALTER TABLE "people" ADD COLUMN "county" text NOT NULL;

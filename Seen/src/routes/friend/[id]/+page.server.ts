@@ -33,21 +33,20 @@ export const actions = {
   update: async ({ request }) => {
     const data = await request.formData();
     const id = data.get('id') as string;
-    const zip = data.get('zip') as string;
+    const county = data.get('county') as string;
     const intent = data.get('intent') as string;
     const content = data.get('content') as string;
-    console.log('🚀 Updating content:', { id, zip, intent, content });
+    console.log('🚀 Updating content:', { id, county, intent, content });
 
     type IntentType = typeof statusEnum.enumValues[number];
     if (
-      zip && !isNaN(Number(zip)) &&
       intent && statusEnum.enumValues.includes(intent as IntentType)
     ) {
       try {
         await db.update(people)
           .set({
             body: content,
-            zip: Number(zip),
+            county: county,
             intent: intent as IntentType
           })
           .where(eq(people.id, id));
@@ -57,7 +56,7 @@ export const actions = {
         return fail(500, { error: 'Failed to update content' });
       }
     } else {
-      console.error('Invalid input:', { id, content, zip, intent });
+      console.error('Invalid input:', { id, content, county, intent });
       return fail(400, { error: 'Invalid input' });
     }
   },

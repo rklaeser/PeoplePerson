@@ -1,0 +1,2 @@
+CREATE TYPE "public"."region" AS ENUM('midwest', 'bay', 'tahoe', 'sac', 'socal', 'uncategorized');--> statement-breakpoint
+ALTER TABLE "people" ADD COLUMN "region" "region" DEFAULT 'uncategorized' NOT NULL;

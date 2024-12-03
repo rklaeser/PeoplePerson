@@ -4,12 +4,19 @@
   import 'easymde/dist/easymde.min.css'; // Import EasyMDE CSS
   import snarkdown from 'snarkdown';
   import { goto } from '$app/navigation';
+  import counties from '$lib/stores/geojson-counties-fips.json'; // Adjust path as needed
+  import type { FeatureCollection, Geometry } from 'geojson';
 
-  //export const prerender = false;
+  // Explicitly type the imported JSON as a GeoJSON FeatureCollection
+  const countiesData: FeatureCollection<Geometry> = counties as FeatureCollection<Geometry>;
 
-  export let data: { friend: { id: string; name: string; zip: string; body: string; intent: string }, associates: { id: string; name: string; intent: string }[] };
+  // Extract county names from the GeoJSON data
+  const countyNames = countiesData.features
+    .map(feature => feature.properties?.NAME)
+    .filter(name => name != undefined);
 
-  let markdownContent = data.friend.body;
+  export let data: { friend: { id: string; name: string; zip: string; body: string; intent: string, county: string }, associates: { id: string; name: string; intent: string }[] };
+
   let htmlContent = snarkdown(data.friend.body);
   let editor: any;
   let isEditing = false;
@@ -65,6 +72,9 @@
   // Reactive statement to update htmlContent when markdownContent changes
   $: htmlContent = snarkdown(data.friend.body);
 
+  function handleCountySelect(event) {
+    data.friend.county = event.target.value;
+  }
 
   onMount(() => {
     // Initialize editor if already in editing mode
@@ -110,8 +120,13 @@
         </select>
       </div>
       <div class="field-container">
-        <label for="zip">ZIP</label>
-        <input type="text" id="zip" name="zip" bind:value={data.friend.zip} class="border px-2 py-1 mb-2">
+        <label for="county">County</label>
+        <input type="text" id="county" name="county" bind:value={data.friend.county} class="border px-2 py-1 mb-2" list="county-list" on:input={handleCountySelect}>
+        <datalist id="county-list">
+          {#each countyNames as county}
+            <option value={county}>{county}</option>
+          {/each}
+        </datalist>
       </div>
     </form>  
     <textarea id="markdown-editor"></textarea>
@@ -127,8 +142,8 @@
     </form>
   {:else} 
   <button on:click={toggleEdit} class="bg-blue-500 text-white px-4 py-2 rounded">Edit</button>
-    <p>zip {data.friend.zip}</p> 
-    <p>status {data.friend.intent}</p> 
+    <p>County {data.friend.county}</p> 
+    <p>Status {data.friend.intent}</p> 
     <div>{@html htmlContent}</div>
   {/if}
 
