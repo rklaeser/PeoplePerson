@@ -1,7 +1,7 @@
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import {db} from '$lib/db/client';
-import { people, associations, statusEnum } from '$lib/db/schema';
+import { people, associations, journal, statusEnum } from '$lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { fail } from '@sveltejs/kit';
 
@@ -20,8 +20,12 @@ export const load: PageServerLoad = async ({ params}) => {
                                             .where(eq(associations.primary_id, id))
                                             .execute();
       const associates = associatesResult.map(row => row.people);
-      console.log('🚀 Person fetched:', friend.name, );    
-      return { friend, associates };
+
+
+    const journals = await db.select().from(journal).where(eq(journal.person_id, id)).execute();
+
+      console.log('🚀 Person fetched:', {friend, associates, journals} );   
+      return { friend, associates, journals };
         }
     catch(error){
         console.error('API POST Error:', error);
@@ -139,6 +143,38 @@ deleteAssociation: async ({ request }) => {
     return fail(500, { error: 'Failed to delete associate' });
   }
 },
+createJournal: async ({ request }) => {
+  const data = await request.formData();
+  const personId = data.get('id') as string;
+  const entry = data.get('content') as string;
+  const title = data.get('title') as string;
+  console.log('🚀 Creating journal entry:', { personId, entry });
+
+  try {
+    await db.insert(journal).values({
+      person_id: personId,
+      body: entry,
+      title: title
+    });
+    console.log('🚀 Journal entry created:', { personId, entry });
+  } catch (error) {
+    console.error('API POST Error:', error);
+    return fail(500, { error: 'Failed to create journal entry' });
+  }
+},
+deleteJournal: async ({ request }) => {
+  const data = await request.formData();
+  const journalId = data.get('id') as string;
+  console.log('🚀 Deleting journal entry:', journalId);
+
+  try {
+    await db.delete(journal).where(eq(journal.id, journalId));
+    console.log('🚀 Journal entry deleted:', journalId);
+  } catch (error) {
+    console.error('API POST Error:', error);
+    return fail(500, { error: 'Failed to delete journal entry' });
+  }
+}
 };
 
 

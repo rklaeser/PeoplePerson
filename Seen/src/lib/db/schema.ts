@@ -29,3 +29,13 @@ export const associations = pgTable('associations', {
   ];
 }
 );
+
+export const journal = pgTable('journal', {
+  id: uuid('id').primaryKey().notNull().defaultRandom(),
+  person_id: uuid('person_id').notNull().references(() => people.id),
+  title: text('title').notNull().$default(() => 'Untitled'),
+  body: text('body').notNull(),
+  created_at: timestamp('created_at').notNull().defaultNow(),
+  updated_at: timestamp('updated_at').notNull().defaultNow().$onUpdate(() => new Date())
+});
+
