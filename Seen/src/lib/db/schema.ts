@@ -39,3 +39,20 @@ export const journal = pgTable('journal', {
   updated_at: timestamp('updated_at').notNull().defaultNow().$onUpdate(() => new Date())
 });
 
+export const groups = pgTable('groups', {
+  id: uuid('id').primaryKey().notNull().defaultRandom(),
+  name: text('name').notNull(),
+  created_at: timestamp('created_at').notNull().defaultNow(),
+  updated_at: timestamp('updated_at').notNull().defaultNow().$onUpdate(() => new Date())
+});
+
+export const groupAssociations = pgTable('groupAssociations', {
+  group_id: uuid('group_id').notNull().references(() => groups.id),
+  person_id: uuid('person_id').notNull().references(() => people.id),
+  created_at: timestamp('created_at').notNull().defaultNow(),
+  updated_at: timestamp('updated_at').notNull().defaultNow().$onUpdate(() => new Date())
+}, (table) => {
+  return [
+    primaryKey({ columns: [table.group_id, table.person_id] })
+  ];
+});

@@ -1,8 +1,8 @@
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import {db} from '$lib/db/client';
-import { people, associations, journal, statusEnum } from '$lib/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { people, associations, journal, statusEnum, groups, groupAssociations } from '$lib/db/schema';
+import { eq, and, exists, sql } from 'drizzle-orm';
 import { fail } from '@sveltejs/kit';
 
 
@@ -21,11 +21,18 @@ export const load: PageServerLoad = async ({ params}) => {
                                             .execute();
       const associates = associatesResult.map(row => row.people);
 
+      const groupData = await db.select({
+        groupId: groups.id,
+        groupName: groups.name
+      }).from(groups).innerJoin(groupAssociations, eq(groups.id, groupAssociations.group_id)).where(eq(groupAssociations.person_id, id));
+    
 
     const journals = await db.select().from(journal).where(eq(journal.person_id, id)).execute();
 
-      console.log('🚀 Person fetched:', {friend, associates, journals} );   
-      return { friend, associates, journals };
+      console.log('🚀 Person fetched:', {friend, associates, journals, groupData} );   
+      return { friend, associates, journals, 
+        groupData: groupData.length ? groupData : []
+       };
         }
     catch(error){
         console.error('API POST Error:', error);
@@ -34,35 +41,24 @@ export const load: PageServerLoad = async ({ params}) => {
 };
 
 export const actions = {
-  update: async ({ request }) => {
+  updateBody: async ({ request }) => {
     const data = await request.formData();
     const id = data.get('id') as string;
-    const county = data.get('county') as string;
-    const intent = data.get('intent') as string;
     const content = data.get('content') as string;
-    console.log('🚀 Updating content:', { id, county, intent, content });
 
-    type IntentType = typeof statusEnum.enumValues[number];
-    if (
-      intent && statusEnum.enumValues.includes(intent as IntentType)
-    ) {
+    console.log('🚀 Updating content:', { id, content });
+
       try {
         await db.update(people)
           .set({
-            body: content,
-            county: county,
-            intent: intent as IntentType
-          })
+            body: content          })
           .where(eq(people.id, id));
         console.log('🚀 Content updated');
+
       } catch (error) {
         console.error('API POST Error:', error);
         return fail(500, { error: 'Failed to update content' });
       }
-    } else {
-      console.error('Invalid input:', { id, content, county, intent });
-      return fail(400, { error: 'Invalid input' });
-    }
   },
   create: async ({ request }) => {
     const data = await request.formData();
@@ -70,11 +66,7 @@ export const actions = {
     if (name && typeof name === 'string') {
       try {
         await db.insert(people).values({
-          name: name,
-          zip: 94117,
-          body: '## Hello, world!',
-          intent: 'new'
-        });
+          name: name        });
         console.log('🚀 Person added:', name);
       } catch (error) {
         console.error('API POST Error:', error);
@@ -174,9 +166,91 @@ deleteJournal: async ({ request }) => {
     console.error('API POST Error:', error);
     return fail(500, { error: 'Failed to delete journal entry' });
   }
+},
+addGroup: async ({ request }) => {
+  const data = await request.formData();
+  const groupName = data.get('name') as string;
+  const personId = data.get('id') as string;
+  console.log('🚀 Adding person to group:', { personId, groupName });
+  let groupId: string;
+  try {
+    // Get group ID, add group if does not exist
+    const group = await db.select(
+      {id: groups.id}
+    ).from(groups).where(eq(groups.name, groupName)).execute();
+    if (group.length === 0) {
+      const newGroup = await db.insert(groups).values({ name: groupName }).returning({ insertedId: groups.id });
+      groupId = newGroup[0].insertedId;
+    }
+    else{
+      groupId = group[0].id;
+    }
+
+    // Add person to group
+    await db.insert(groupAssociations).values({
+      person_id: personId,
+      group_id: groupId
+    });
+    console.log('🚀 Person added to group:', { personId, groupId });
+  } catch (error) {
+    console.error('API POST Error:', error);
+    return fail(500, { error: 'Failed to add person to group' });
+  }
+},
+removeGroup: async ({ request }) => {
+  const data = await request.formData();
+  const groupId = data.get('groupId') as string;
+  const personId = data.get('id') as string;
+  console.log('🚀 Removing person from group:', { personId, groupId });
+
+  try {
+    await db.delete(groupAssociations).where(
+      and(
+        eq(groupAssociations.group_id, groupId),
+        eq(groupAssociations.person_id, personId)
+      )
+    );
+    console.log('🚀 Person removed from group:', { personId, groupId });
+  } catch (error) {
+    console.error('API POST Error:', error);
+    return fail(500, { error: 'Failed to remove person from group' });
+  }
+},
+updateStatus: async ({ request }) => {
+ const data = await request.formData();
+  const id = data.get('id') as string;
+  const intent = data.get('intent') as string;
+  console.log('🚀 Updating status:', { id, intent });
+  type IntentType = typeof statusEnum.enumValues[number];
+    if (
+      intent && statusEnum.enumValues.includes(intent as IntentType)
+    )
+  try{
+    await db.update(people).set({
+      intent: intent as IntentType
+    }).where(eq(people.id, id));
+    console.log('🚀 Status updated');
+  }
+  catch(error){
+    console.error('API POST Error:', error);
+    return fail(500, { error: 'Failed to update status' });
+  }
+
+},
+updateCounty: async ({ request }) => {
+  const data = await request.formData();
+  const id = data.get('id') as string;
+  const county = data.get('county') as string;
+  console.log('🚀 Updating county:', { id, county });
+
+  try {
+    await db.update(people).set({
+      county: county
+    }).where(eq(people.id, id));
+    console.log('🚀 County updated');
+  } catch (error) {
+    console.error('API POST Error:', error);
+    return fail(500, { error: 'Failed to update county' });
+  }
 }
 };
-
-
-
-
