@@ -1,11 +1,16 @@
-<script>
+<script lang=ts>
 	import Header from './Header.svelte';
 	import '../app.css';
 	import '../tailwind.css';
+	import type { Friend } from '$lib/types'; // Import the Friend interface
+
+	export let data: { people: Friend[] };
+
+
 </script>
 
 <div class="app">
-	<Header />
+	<Header {data} />
 
 	<main>
 		<slot />

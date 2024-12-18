@@ -1,4 +1,4 @@
-import { integer, pgTable, text, timestamp, uuid, pgEnum, primaryKey } from 'drizzle-orm/pg-core';
+import { integer, pgTable, text, timestamp, uuid, pgEnum, primaryKey, date } from 'drizzle-orm/pg-core';
 
 // Define the enum type for status
 export const statusEnum = pgEnum('intent', ['romantic', 'core', 'archive', 'new', 'invest', 'associate']);
@@ -11,11 +11,13 @@ export const people = pgTable('people', {
   name: text('name').notNull(),
   region: regionEnum().notNull().default('uncategorized'),
   zip: integer('zip').notNull().default(0),
-  county: text('county').notNull().$default(() => 'uncategorized'), // Add county field
+  county: text('county').notNull().$default(() => 'uncategorized'),
   created_at: timestamp('created_at').notNull().defaultNow(),
   updated_at: timestamp('updated_at').notNull().defaultNow().$onUpdate(() => new Date()),
-  body: text('body').notNull().$default(() => 'Add a description'), // Add body field with default value
-  intent: statusEnum().notNull().default('new') // Add status field with default value 'new'
+  body: text('body').notNull().$default(() => 'Add a description'),
+  intent: statusEnum().notNull().default('new'), 
+  birthday: date('birthday'), 
+  mnemonic: text('mnemonic')
 });
 
 // Define the associations table

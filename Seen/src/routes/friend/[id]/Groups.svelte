@@ -1,9 +1,15 @@
 <script lang=ts>
+	  import { goto } from '$app/navigation';
 
     export let data;
     export let isEditing;
     
     let newName = '';
+
+    function navigateToGroup(id: string) {
+      console.log('Navigating to group: ', id);
+    	goto(`/group/${id}`);
+  	}
 </script>
 
 {#if isEditing}
@@ -31,7 +37,14 @@
     </div>
   </div>
 {:else}
-    {#each data.groupData as group}
-        <p><i class="fa-solid fa-users"></i> {group.groupName}</p>
-    {/each}
+    <div class="flex gap-2">
+      {#each data.groupData as group}
+      
+      <button on:click={() => navigateToGroup(group.groupId)} class="bg-gray-300 hover:bg-gray-400 text-black flex items-center rounded cursor-pointer" aria-label="Delete {group.groupName}">
+        <div class="flex-grow px-4 py-2">
+          <i class="fa-solid fa-users"></i> {group.groupName}
+        </div>
+      </button>
+      {/each}
+    </div>
 {/if}

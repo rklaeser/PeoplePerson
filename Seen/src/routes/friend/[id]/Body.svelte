@@ -5,12 +5,13 @@
   import 'easymde/dist/easymde.min.css'; // Import EasyMDE CSS
 
 
+
   export let data: { friend: { id: string; name: string; zip: string; body: string; intent: string, county: string }, 
                      associates: { id: string; name: string; intent: string }[],
                      journals: { id: string; title: string; person_id: string, created_at: Date; body: string }[],
                     groupData: { groupId: string; groupName: string}[] };
 
-  export let isEditing: boolean;
+  let isEditing = false;
 
   let editor: any;
 
@@ -61,27 +62,22 @@
   });
 </script>
 
-{#if isEditing}
-    <form method="POST" action="?/updateBody" class="form-style">
-        <button type="submit" class="bg-blue-500 text-white px-6 py-3 text-lg rounded">Save</button>
-        <input type="hidden" name="id" value={data.friend.id}>
-        <input type="hidden" name="content" value={data.friend.body}>
+<div class="relative">
+  {#if isEditing}
+    <form method="POST" action="?/updateBody" class="flex flex-col gap-4 w-full">
+      <button type="submit" class="bg-blue-500 text-white px-6 py-3 text-lg rounded">Save</button>
+      <input type="hidden" name="id" value={data.friend.id}>
+      <input type="hidden" name="content" value={data.friend.body}>
     </form>  
-    <textarea id="markdown-editor"></textarea>
-{:else} 
-<button on:click={toggleEdit} class= "text-gray px-6 py-3 text-lg" aria-label="Edit"><i class="fas fa-pencil-alt"></i> </button>
-<div>{@html snarkdown(data.friend.body)}</div>
-{/if}
+    <textarea id="markdown-editor" class="w-full h-72"></textarea>
+  {:else} 
+    <button on:click={toggleEdit} class="absolute top-[-15px] right-0 text-gray-500 px-6 py-3 text-lg" aria-label="Edit"><i class="fas fa-pencil-alt"></i></button>
+    <div>{@html snarkdown(data.friend.body)}</div>
+  {/if}
+</div>
 <style>
     #markdown-editor {
         width: 100%;
         height: 300px;
     }
-
-  .form-style {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem; /* Adjust the gap between form elements */
-    width: 100%; /* Make the form take the full width */
-  }
 </style>

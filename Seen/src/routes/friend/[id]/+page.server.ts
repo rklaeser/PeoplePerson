@@ -60,6 +60,38 @@ export const actions = {
         return fail(500, { error: 'Failed to update content' });
       }
   },
+  updateBirthday: async ({ request }) => {
+    const data = await request.formData();
+    const id = data.get('id') as string;
+    const birthday = data.get('birthday') as string;
+    console.log('🚀 Updating birthday:', { id, birthday });
+
+    try {
+      await db.update(people).set({
+        birthday: birthday
+      }).where(eq(people.id, id));
+      console.log('🚀 Birthday updated');
+    } catch (error) {
+      console.error('API POST Error:', error);
+      return fail(500, { error: 'Failed to update birthday' });
+    }
+  },
+  updateMnemonic: async ({ request }) => {
+    const data = await request.formData();
+    const id = data.get('id') as string;
+    const mnemonic = data.get('mnemonic') as string;
+    console.log('🚀 Updating mnemonic:', { id, mnemonic });
+
+    try {
+      await db.update(people).set({
+        mnemonic: mnemonic
+      }).where(eq(people.id, id));
+      console.log('🚀 Mnemonic updated');
+    } catch (error) {
+      console.error('API POST Error:', error);
+      return fail(500, { error: 'Failed to update mnemonic' });
+    }
+  },
   create: async ({ request }) => {
     const data = await request.formData();
     const name = data.get('name');
@@ -76,6 +108,27 @@ export const actions = {
       console.error('Invalid name:', name);
       return fail(400, { error: 'Invalid name' });
     }
+  },
+  delete: async ({ request }) => {
+    console.log('🚀 Deleting person: server');
+    const data = await request.formData();
+    const id = data.get('id') as string;
+    const name = data.get('name') as string;
+    console.log('🚀 Deleting person:', { id, name });
+
+    try {
+
+      await db.delete(associations).where(eq(associations.primary_id, id));
+      await db.delete(groupAssociations).where(eq(groupAssociations.person_id, id));
+      await db.delete(journal).where(eq(journal.person_id, id));
+
+
+      await db.delete(people).where(eq(people.id, id));
+      console.log('🚀 Person deleted:', { id, name });
+    } catch (error) {
+      console.error('API DELETE Error:', error);
+      return fail(500, { error: 'Failed to delete person'});
+      }
   },
   createAssociation: async ({ request }) => {
     const data = await request.formData();
