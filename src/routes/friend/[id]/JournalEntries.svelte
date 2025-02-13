@@ -1,6 +1,5 @@
 <script lang=ts>
     import snarkdown from 'snarkdown';
-    import 'easymde/dist/easymde.min.css'; // Import EasyMDE CSS
     import { browser } from '$app/environment';
 
 

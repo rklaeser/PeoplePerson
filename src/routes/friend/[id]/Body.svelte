@@ -2,8 +2,16 @@
   import snarkdown from 'snarkdown';
   import { browser } from '$app/environment';
   import { onMount } from 'svelte';
-  import 'easymde/dist/easymde.min.css'; // Import EasyMDE CSS
+  import { Carta, MarkdownEditor, Markdown } from 'carta-md';
+  import debounce from 'debounce';
+  import { marked } from 'marked'
 
+
+  const carta = new Carta({
+		sanitizer: false
+	});
+
+	let value = '# H1'
 
 
   export let data: { friend: { id: string; name: string; zip: string; body: string; intent: string, county: string }, 

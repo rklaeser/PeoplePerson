@@ -1,6 +1,8 @@
 <script lang=ts>
     import { goto } from '$app/navigation';
 	import type { Friend, Group } from '$lib/types'; // Import the Friend interface
+	import { intentImages } from '$lib/images/intentImages';
+    import fallbackImage from '$lib/images/github.svg';
 
       let newName = '';
       let newIntent = 'new';
@@ -42,6 +44,7 @@ async function handleDelete(event: Event) {
 	<table class="min-w-full bg-white border border-gray-300 shadow-md rounded-lg overflow-hidden">
 		<thead class="bg-gray-200">
 			<tr class="text-left text-gray-600">
+				<th class="py-3 px-4 border-b border-gray-300">Name</th>
 				<th class="py-3 px-4 border-b border-gray-300">
 					Status:
 					<select bind:value={selectedStatus} class="py-3 px-4 border-b border-gray-300">
@@ -55,7 +58,6 @@ async function handleDelete(event: Event) {
 					  </select>
 				</th>
 				
-				<th class="py-3 px-4 border-b border-gray-300">Name</th>
 				<th class="py-3 px-4 border-b border-gray-300">
 					Group: 
 					<select bind:value={selectedGroup} class="py-3 px-4 border-b border-gray-300">
@@ -71,21 +73,19 @@ async function handleDelete(event: Event) {
 		<tbody>
 			{#each filteredPeople as person}
 			<tr class="hover:bg-gray-100 cursor-pointer" on:click={() => navigateToFriend(person.id)}>
-				{#if person.intent === 'romantic'}
-				<td class="py-2 px-4 border-b border-gray-300">🌸</td>
-			  {:else if person.intent === 'core'}
-				<td class="py-2 px-4 border-b border-gray-300">🌻</td>
-			  {:else if person.intent === 'archive'}
-				<td class="py-2 px-4 border-b border-gray-300">🥀</td>
-			  {:else if person.intent === 'new'}
-				<td class="py-2 px-4 border-b border-gray-300">🌰</td>
-			  {:else if person.intent === 'invest'}
-				<td class="py-2 px-4 border-b border-gray-300">🌱</td>
-			  {:else}
-				<td class="py-2 px-4 border-b border-gray-300">❓</td>
-			  {/if}
-			<td class="py-2 px-4 border-b border-gray-300">{person.name}</td>
-			<td class="py-2 px-4 border-b border-gray-300">{person.group_name}</td>
+				<td class="py-2 px-4 border-b border-gray-300">
+					<img
+					src={intentImages[person.intent] || fallbackImage}
+					alt={person.intent}
+					class="inline-block w-8 h-18 align-middle"/>
+					{person.name}
+				</td>
+				<td class="py-2 px-4 border-b border-gray-300">	
+				
+			</td>
+			<td class="py-2 px-4 border-b border-gray-300">
+				{person.group_name}
+			</td>
 			<td class="py-2 px-4 border-b border-gray-300">
 			  <form method="POST" action="?/delete" on:submit={handleDelete}>
 				<input type="hidden" name="id" value={person.id}>
