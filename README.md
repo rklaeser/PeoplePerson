@@ -2,6 +2,11 @@
 
 Remember names and anything else. Study your friends, be a better friend.
 
+## Why?
+"Become genuinely interested in other people"
+
+"She smiled, she laughed, she waved. Using the reminders and lists she kept in her notebook, she asked after families, new births, and favorite axehounds. She inquired about trade situations, took notes on which lighteyes seemed to be avoiding others. In short, she acted like a queen." - Brandon Sanderson describing Navani Kholin, Rhythm of War
+
 ## Creating a project
 
 ```bash
