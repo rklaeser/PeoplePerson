@@ -1,4 +1,4 @@
-# FriendShip
+# Fellowship
 
 Remember names and anything else. Study your friends, be a better friend.
 
