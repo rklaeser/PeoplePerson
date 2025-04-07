@@ -1,5 +1,7 @@
 # Fellowship
 
+Notice of incomplete CSS: Fellowship is an application I'm building for my own learning. Some features may be underdeveloped as what supports my learning doesn't neccesarily track one to one with what makes a great app.
+
 Remember names and anything else. Study your friends, be a better friend.
 
 ## Why?
