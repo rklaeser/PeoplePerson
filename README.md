@@ -106,3 +106,5 @@ https://platform.openai.com/docs/guides/function-calling/function-calling?api-mo
 
 What models
 Start with OpenAI, can do local model next. Can have models compare.
+
+Can give the prompt examples
