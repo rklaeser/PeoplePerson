@@ -41,6 +41,62 @@ To create a production version of your app:
 npm run build
 ```
 
+Outline of pwa llm feature
+
+# Fellowship – Project Architecture Summary
+
+## Architecture Decisions
+
+| Topic | Decision |
+|:------|:---------|
+| **Frontend framework** | SvelteKit |
+| **Frontend mode** | PWA (Progressive Web App), no server-side rendering (`ssr = false`) |
+| **Voice input** | Web Speech API (native browser capture) |
+| **Backend architecture** | Two backends:<br>- Web backend (database CRUD)<br>- LLM backend (natural language parsing) |
+| **LLM handling** | Backend receives text → sends it to LLM (e.g., OpenAI) → parses into structured JSON |
+| **Database operations** | Structured fields from LLM used to query or create friend records |
+| **User interaction flow** | Speak → Transcribe → Send to backend → Parse → Search database → Return/display/speak result |
+| **Siri native integration** | Not using native Siri Intents (too rigid for messy natural language) |
+| **Hosting and deployment** | Frontend as static files; backends as separate API containers |
+
+---
+
+## Key Technologies
+
+| Area | Tool |
+|:-----|:----|
+| **Frontend** | SvelteKit + Web Speech API |
+| **Backend (Web)** | Express or Fastify (CRUD operations) |
+| **Backend (LLM)** | Express or Fastify (LLM parsing operations) |
+| **LLM API** | OpenAI API (GPT-4o or similar) |
+| **Database** | Supabase / Postgres with DrizzleORM |
+| **PWA features** | Offline support, installable on iPhone |
+
+---
+
+## Design Philosophy
+
+- **Voice-first interaction** (natural conversation, not rigid commands)
+- **LLM handles messy human input** (not Siri Intents)
+- **Frontend is lightweight and easily deployable**
+- **Backends are cleanly separated for scalability**
+- **PWA provides installability without App Store requirements**
+
+---
+
+## User Flow Summary
+
+1. User taps the microphone button.
+2. Speech is captured and transcribed in-browser.
+3. Transcribed text is sent to `/agent/parse` on the LLM backend.
+4. LLM parses text into structured fields (e.g., name, location, description).
+5. Structured fields are sent to the Web backend to query or create database entries.
+6. Result is returned and optionally read back to the user with SpeechSynthesis.
+
+---
+
+# ✅ Ready to Build Fellowship 🚀
+
 You can preview the production build with `npm run preview`.
 
 > To deploy your app, you may need to install an [adapter](https://kit.svelte.dev/docs/adapters) for your target environment.
