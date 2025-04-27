@@ -100,3 +100,9 @@ Outline of pwa llm feature
 You can preview the production build with `npm run preview`.
 
 > To deploy your app, you may need to install an [adapter](https://kit.svelte.dev/docs/adapters) for your target environment.
+
+Function calling could be used to let the model query the database for possible matches are return the highest ranking 3
+https://platform.openai.com/docs/guides/function-calling/function-calling?api-mode=responses
+
+What models
+Start with OpenAI, can do local model next. Can have models compare.
