@@ -9,6 +9,9 @@ Remember names and anything else. Study your friends, be a better friend.
 
 "She smiled, she laughed, she waved. Using the reminders and lists she kept in her notebook, she asked after families, new births, and favorite axehounds. She inquired about trade situations, took notes on which lighteyes seemed to be avoiding others. In short, she acted like a queen." - Brandon Sanderson describing Navani Kholin, Rhythm of War
 
+Why not Siri?
+Siri intents handle stricyl formated comands like "play my audiobook" and not unstructured comands like "find my mate with the blonde hair who doesn't have a job".
+
 ## Creating a project
 
 ```bash
