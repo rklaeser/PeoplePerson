@@ -21,7 +21,6 @@ async function seed() {
     const michael = await Person.create({
       name: 'Michael Scott',
       region: Region.SCRANTON,
-      zip: 12345,
       county: 'Scranton',
       body: 'World\'s Best Boss',
       intent: Intent.NEW
@@ -30,7 +29,6 @@ async function seed() {
     const pam = await Person.create({
       name: 'Pam Beesly',
       region: Region.SCRANTON,
-      zip: 12345,
       county: 'Scranton',
       body: 'Office Administrator',
       intent: Intent.ROMANTIC
@@ -39,7 +37,6 @@ async function seed() {
     const creed = await Person.create({
       name: 'Creed Bratton',
       region: Region.SCRANTON,
-      zip: 12345,
       county: 'Scranton',
       body: 'Quality Assurance',
       intent: Intent.NEW
@@ -49,7 +46,6 @@ async function seed() {
     const steve = await Person.create({
       name: 'Steve Prefontaine',
       region: Region.UNCATEGORIZED,
-      zip: 97401,
       county: 'Eugene',
       body: 'Legendary Runner',
       intent: Intent.NEW
@@ -58,7 +54,6 @@ async function seed() {
     const eliud = await Person.create({
       name: 'Eliud Kipchoge',
       region: Region.UNCATEGORIZED,
-      zip: '00100',
       county: 'Nairobi',
       body: 'Marathon World Record Holder',
       intent: Intent.NEW
@@ -67,7 +62,6 @@ async function seed() {
     const joan = await Person.create({
       name: 'Joan Benoit Samuelson',
       region: Region.UNCATEGORIZED,
-      zip: '04101',
       county: 'Portland',
       body: 'First Women\'s Olympic Marathon Champion',
       intent: Intent.NEW
@@ -77,7 +71,6 @@ async function seed() {
     const jan = await Person.create({
       name: 'Jan Levinson',
       region: Region.SCRANTON,
-      zip: 12345,
       county: 'Scranton',
       body: 'Former Dunder Mifflin VP',
       intent: Intent.ASSOCIATE
@@ -86,7 +79,6 @@ async function seed() {
     const edTruck = await Person.create({
       name: 'Ed Truck',
       region: Region.SCRANTON,
-      zip: 12345,
       county: 'Scranton',
       body: 'Former Regional Manager',
       intent: Intent.ARCHIVE
@@ -95,7 +87,6 @@ async function seed() {
     const jim = await Person.create({
       name: 'Jim Halpert',
       region: Region.SCRANTON,
-      zip: 12345,
       county: 'Scranton',
       body: 'Sales Representative',
       intent: Intent.CORE

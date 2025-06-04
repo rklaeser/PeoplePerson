@@ -10,6 +10,13 @@
   let isSearching = false;
   let error = '';
 
+  // Create person state
+  let createPrompt = '';
+  let isCreating = false;
+  let createError = '';
+  let createMessage = '';
+  let errorDetails = '';
+
   async function handleSearch() {
     if (!searchPrompt.trim()) return;
     
@@ -38,6 +45,43 @@
     }
   }
 
+  async function handleCreate() {
+    if (!createPrompt.trim()) return;
+    
+    try {
+      isCreating = true;
+      createError = '';
+      createMessage = '';
+      errorDetails = '';
+      const response = await fetch('/api/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ description: createPrompt })
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || result.message || 'Failed to create person');
+      }
+
+      createMessage = result.message;
+      createPrompt = ''; // Clear the input
+      // Optionally refresh the page or update the table
+      window.location.reload();
+    } catch (e) {
+      console.error('Create error:', e);
+      createError = e instanceof Error ? e.message : 'Failed to create person. Please try again.';
+      if (e instanceof Error && e.stack) {
+        errorDetails = e.stack;
+      }
+    } finally {
+      isCreating = false;
+    }
+  }
+
   function handleKeydown(event: KeyboardEvent) {
     if (event.key === 'Enter') {
       handleSearch();
@@ -51,6 +95,41 @@
 </svelte:head>
 
 <div class="container mx-auto px-4 py-8">
+  <div class="max-w-2xl mx-auto mb-8">
+    <h2 class="text-2xl font-bold mb-4">Create New Person</h2>
+    <div class="flex gap-2">
+      <textarea
+        bind:value={createPrompt}
+        placeholder="Describe the person you want to create (name, location, description, etc.)..."
+        class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px]"
+      />
+      <button
+        on:click={handleCreate}
+        disabled={isCreating}
+        class="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:bg-green-300"
+      >
+        {#if isCreating}
+          <i class="fas fa-spinner fa-spin"></i>
+        {:else}
+          Create
+        {/if}
+      </button>
+    </div>
+
+    {#if createError}
+      <div class="mt-4 text-red-500">
+        <p class="font-semibold">{createError}</p>
+        {#if errorDetails}
+          <pre class="mt-2 text-sm bg-gray-100 p-2 rounded overflow-x-auto">{errorDetails}</pre>
+        {/if}
+      </div>
+    {/if}
+
+    {#if createMessage}
+      <div class="mt-4 text-green-500">{createMessage}</div>
+    {/if}
+  </div>
+
   <div class="max-w-2xl mx-auto mb-8">
     <h2 class="text-2xl font-bold mb-4">Find People</h2>
     <div class="flex gap-2">

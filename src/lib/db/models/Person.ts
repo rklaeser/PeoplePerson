@@ -24,7 +24,6 @@ export class Person extends Model {
   declare id: string;
   declare name: string;
   declare region: Region;
-  declare zip: number;
   declare county: string;
   declare body: string;
   declare intent: Intent;
@@ -49,11 +48,6 @@ Person.init(
       type: DataTypes.ENUM(...Object.values(Region)),
       allowNull: false,
       defaultValue: Region.UNCATEGORIZED
-    },
-    zip: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      defaultValue: 0
     },
     county: {
       type: DataTypes.STRING,

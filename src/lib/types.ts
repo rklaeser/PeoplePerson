@@ -1,15 +1,16 @@
 export interface Friend {
     id: string;
     name: string;
-    intent: string;
-    county: string;
     region: string;
-    zip: number;
+    county: string;
+    group_id?: string;
+    group_name?: string;
     body: string;
+    intent: string;
     birthday: string | null;
     mnemonic: string | null;
-    createdAt: Date;
-    updatedAt: Date;
+    createdAt: string;
+    updatedAt: string;
 }
 
 export interface Group {
