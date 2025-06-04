@@ -1,58 +1,70 @@
-import { db } from '$lib/db/client'; // Adjust the import according to your project structure
-import { people, associations, groups, groupAssociations, journal } from '$lib/db/schema'; // Import the schema
+import { Person, Group, Journal } from '$lib/db/models';
 import { fail } from '@sveltejs/kit';
-import { eq, ne, and } from 'drizzle-orm';
 import { json } from '@sveltejs/kit';
+import type { PageServerLoad } from './$types';
 
-export async function load() {
+export const load: PageServerLoad = async () => {
 	try {
-    // Use drizzle-orm to query the database
-    const result = await db.select().from(groups).execute();
-    //console.log("🚀 People fetched: ", result);  // Logs the query result
-    return {groups: result} ;  // Return a plain object
-  } catch (error) {
-    console.error('API GET Error:', error);
-    throw new Error('Failed to fetch people');
-    }
-  }
+		const people = await Person.findAll({
+			include: [
+				{
+					model: Group,
+					through: { attributes: [] }
+				},
+				{
+					model: Person,
+					as: 'AssociatedPeople',
+					through: { attributes: [] }
+				}
+			]
+		});
 
-  export const actions = {
-    create: async ({ request }) => {
-      const data = await request.formData();
-      const name = data.get('name') as string;
-        try {
-          await db.insert(people).values({
-            name: name,
-            intent: 'new'
-          });
-          console.log('🚀 Person added:', name);
+		const groups = await Group.findAll();
 
-          let newFriend = await db.select(
-            {id: people.id}
-          ).from(people).where(eq(people.name, name));
+		return {
+			people: people.map(person => person.toJSON()),
+			groups: groups.map(group => group.toJSON())
+		};
+	} catch (error) {
+		console.error('Error loading data:', error);
+		return {
+			people: [],
+			groups: []
+		};
+	}
+};
 
-          return { id: newFriend[0].id };
-        } catch (error) {
-          console.error('API POST Error:', error);
-          return fail(500, { error: 'Failed to add person' });
-        }
-    },
-    delete: async ({ request }) => {
-      const data = await request.formData();
-      const id = data.get('id') as string;
-      const name = data.get('name') as string;
-        try {
-
-          await db.delete(associations).where(eq(associations.primary_id, id));
-          await db.delete(groupAssociations).where(eq(groupAssociations.person_id, id));
-          await db.delete(journal).where(eq(journal.person_id, id));
-
-          await db.delete(people).where(eq(people.id, id));
-          console.log('🚀 Person deleted:', name);
-        } catch (error) {
-          console.error('API DELETE Error:', error);
-          return fail(500, { error: 'Failed to delete person' });
-        }
-
-    }
-  };
+export const actions = {
+	create: async ({ request }) => {
+		const data = await request.formData();
+		const name = data.get('name') as string;
+		try {
+			const newPerson = await Person.create({
+				name: name,
+				intent: 'new'
+			});
+			console.log('🚀 Person added:', name);
+			return { id: newPerson.id };
+		} catch (error) {
+			console.error('API POST Error:', error);
+			return fail(500, { error: 'Failed to add person' });
+		}
+	},
+	delete: async ({ request }) => {
+		const data = await request.formData();
+		const id = data.get('id') as string;
+		const name = data.get('name') as string;
+		try {
+			// Delete associated records first
+			await Journal.destroy({ where: { person_id: id } });
+			
+			// Delete the person (this will cascade delete associations)
+			await Person.destroy({ where: { id } });
+			
+			console.log('🚀 Person deleted:', name);
+		} catch (error) {
+			console.error('API DELETE Error:', error);
+			return fail(500, { error: 'Failed to delete person' });
+		}
+	}
+};

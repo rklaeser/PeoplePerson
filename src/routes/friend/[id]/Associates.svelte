@@ -37,6 +37,7 @@
 		  </div>
 
 	{:else}
+	{#if data.associates.length > 0}
 	<div class="flex items-center gap-2 mb-2">
 		{#each data.associates as associate}
 		<button on:click={() => navigateToFriend(associate.id)} class="bg-gray-300 hover:bg-gray-400 text-black flex items-center rounded cursor-pointer" aria-label="Delete {associate.name}">
@@ -45,8 +46,10 @@
 			</div>
 		  </button>
 		{/each}
-	</div>
-		<hr class="my-4 border-gray-300">
+		</div>
+	{:else}
+		<p>No associates</p>
+	{/if}
 	{/if}
 
 

@@ -17,6 +17,8 @@
                      journals: Journal[],
                     groupData: Group[] };
 
+  console.log('Friend Data:', data);
+
   let isEditing = false;
 
   function toggleEdit() {
@@ -30,13 +32,15 @@
   <div class="relative">
     
     <Name {data} {isEditing}/>
-  <div class ="flex gap-4"> 
+  <div class ="flex flex-col gap-4"> 
+    <h1>Attributes</h1>
     <Status {data} {isEditing}/>
     <Location {data} {isEditing}/>
     <Birthday {data} {isEditing}/>
     <Mnemonic {data} {isEditing}/>
   </div>
   <div class="flex flex-col gap-2 mt-2">
+    <h1>Associations</h1>
     <Groups {data} {isEditing}/>
     <Associates {data} {isEditing}/>
   </div>

@@ -1,1 +1,0 @@
-ALTER TABLE "journal" RENAME COLUMN "entry" TO "body";

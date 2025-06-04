@@ -1,1 +1,0 @@
-ALTER TYPE "public"."intent" ADD VALUE 'associate';

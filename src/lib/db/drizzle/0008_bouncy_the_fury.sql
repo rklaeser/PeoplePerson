@@ -1,1 +1,0 @@
-ALTER TABLE "journal" ADD COLUMN "title" text NOT NULL;

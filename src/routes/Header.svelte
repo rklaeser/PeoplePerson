@@ -63,6 +63,7 @@
 						</button>
 					</div>
 					<div class="flex flex-col gap-4 p-4">
+						<a href="/map" class="text-xl" onclick={() => expandMenu = false}>Map</a>
 						<a href="/stats" class="text-xl" onclick={() => expandMenu = false}>Stats</a>
 						<a href="/tutorial" class="text-xl" onclick={() => expandMenu = false}>Tutorial</a>
 					</div>

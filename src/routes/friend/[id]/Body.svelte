@@ -4,20 +4,21 @@
   import { onMount } from 'svelte';
   import { Carta, MarkdownEditor, Markdown } from 'carta-md';
   import debounce from 'debounce';
-  import { marked } from 'marked'
-
+  import { marked } from 'marked';
+  import type { Friend, Group, Journal, Associate } from '$lib/types';
 
   const carta = new Carta({
-		sanitizer: false
-	});
+    sanitizer: false
+  });
 
-	let value = '# H1'
+  let value = '# H1';
 
-
-  export let data: { friend: { id: string; name: string; zip: string; body: string; intent: string, county: string }, 
-                     associates: { id: string; name: string; intent: string }[],
-                     journals: { id: string; title: string; person_id: string, created_at: Date; body: string }[],
-                    groupData: { groupId: string; groupName: string}[] };
+  export let data: { 
+    friend: Friend;
+    associates: Associate[];
+    journals: Journal[];
+    groupData: Group[];
+  };
 
   let isEditing = false;
 

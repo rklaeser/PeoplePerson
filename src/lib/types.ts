@@ -3,26 +3,31 @@ export interface Friend {
     name: string;
     intent: string;
     county: string;
-    group_id: string;
-    group_name: string;
+    region: string;
+    zip: number;
     body: string;
-    birthday: string;
-    mnemonic: string;
-  }
+    birthday: string | null;
+    mnemonic: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+}
 
 export interface Group {
     id: string;
     name: string;
-  }
+}
 
 export interface Journal {
     id: string;
-    person_id: string;
+    personId: string;
     title: string;
     body: string;
-  }
+    createdAt: Date;
+    updatedAt: Date;
+}
 
-  export interface Associate {
-    primary_id: string;
-    associate_id: string;
-  }
+export interface Associate {
+    id: string;
+    name: string;
+    intent: string;
+}

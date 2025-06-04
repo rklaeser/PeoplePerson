@@ -37,6 +37,7 @@
     </div>
   </div>
 {:else}
+  {#if data.groupData.length > 0}
     <div class="flex gap-2">
       {#each data.groupData as group}
       
@@ -47,4 +48,7 @@
       </button>
       {/each}
     </div>
+  {:else}
+    <p>No groups</p>
+  {/if}
 {/if}

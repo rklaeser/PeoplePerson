@@ -1,27 +1,33 @@
-import { db } from '$lib/db/client'; // Adjust the import according to your project structure
-import { people, associations, groups, groupAssociations, journal } from '$lib/db/schema'; // Import the schema
+import { Person, sequelize } from '$lib/db/models';
 import { fail } from '@sveltejs/kit';
-import { eq, ne, and, count, gt, sql } from 'drizzle-orm';
 import { json } from '@sveltejs/kit';
+import { Op } from 'sequelize';
 
 export async function load() {
 	try {
-    // Use drizzle-orm to query the database
-    const result = await db
-    .select({
-      intent: people.intent,
-      count: count(),
-      recentCount: sql`COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '7 days')`
-    })
-    .from(people)
-    .groupBy(people.intent)
-    .execute();
+		// Get total counts by intent
+		const intentStats = await Person.findAll({
+			attributes: [
+				'intent',
+				[sequelize.fn('COUNT', sequelize.col('id')), 'count'],
+				[
+					sequelize.literal(`COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '7 days')`),
+					'recentCount'
+				]
+			],
+			group: ['intent']
+		});
 
+		// Transform the data to match the expected format
+		const result = intentStats.map(stat => ({
+			intent: stat.getDataValue('intent'),
+			count: parseInt(stat.getDataValue('count')),
+			recentCount: parseInt(stat.getDataValue('recentCount'))
+		}));
 
-    //console.log("🚀 People fetched: ", result);  // Logs the query result
-    return { intents: result } ;  // Return a plain object
-  } catch (error) {
-    console.error('API GET Error:', error);
-    throw new Error('Failed to fetch people');
-    }
-  }
+		return { intents: result };
+	} catch (error) {
+		console.error('API GET Error:', error);
+		throw new Error('Failed to fetch intent statistics');
+	}
+}
