@@ -6,7 +6,7 @@ export async function getPeopleNotAssociates() {
     const people = await Person.findAll({
         where: {
             intent: {
-                [Op.not]: 'associate' // exclude associates
+                [Op.not]: ['associate', 'archive'] // exclude associates and archived
             }
         },
         include: [
@@ -20,6 +20,15 @@ export async function getPeopleNotAssociates() {
                 through: { attributes: [] }
             }
         ]
+    });
+    return people;
+}
+
+export async function getArchivedPeople() {
+    const people = await Person.findAll({
+        where: {
+            intent: 'archive'
+        }
     });
     return people;
 }

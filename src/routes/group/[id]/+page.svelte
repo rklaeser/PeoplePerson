@@ -8,4 +8,3 @@ export let data: { group: {id: string; name: string},
 </script>
 
 <h1>{data.group.name}</h1>
-<Table people={data.people} groupId={data.group.id}/>

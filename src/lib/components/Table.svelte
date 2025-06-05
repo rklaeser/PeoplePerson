@@ -4,8 +4,7 @@
 	import { intentImages } from '$lib/images/intentImages';
     import fallbackImage from '$lib/images/github.svg';
     import ProfilePic from '$lib/components/ProfilePic.svelte';
-    import { friends, groups } from '$lib/stores/friends';
-    import { onMount } from 'svelte';
+    import { friends, groups, archivedPeople } from '$lib/stores/friends';
 
       let newName = '';
       let newIntent = 'new';
@@ -17,6 +16,7 @@
 
 	  export let groupId: string | null = null; // Optional group ID
 	  
+      let showArchived = false;
 
       function navigateToFriend(id: string) {
             goto(`/person/${id}`);
@@ -85,10 +85,6 @@ async function handleDelete(event: Event) {
     ? Object.keys(groupedPeople).sort()
     : [''];
 
-    onMount(() => {
-        console.log($friends);
-        console.log($groups);
-    });
 
 </script>
 
@@ -192,4 +188,36 @@ async function handleDelete(event: Event) {
             {/if}
         </div>
     </div>
+</div>
+
+<!-- Archived People Section -->
+<div class="mt-4">
+    <button 
+        class="w-full px-4 py-2 bg-gray-800 text-gray-300 hover:bg-gray-700 flex items-center justify-between"
+        on:click={() => showArchived = !showArchived}
+    >
+        <span>Archived People ({$archivedPeople.length})</span>
+        <i class="fas fa-chevron-{showArchived ? 'up' : 'down'}"></i>
+    </button>
+    
+    {#if showArchived}
+        <div class="border-b border-gray-300 shadow-md overflow-hidden">
+            {#each $archivedPeople as person}
+                <div class="flex gap-x-4 px-4 py-2 border-b border-gray-300 hover:bg-gray-600 cursor-pointer items-center"
+                    aria-label={`View ${person.name}'s profile`}
+                    on:click={() => navigateToFriend(person.id)}
+                    on:keydown={event => { if (event.key === 'Enter' || event.key === ' ') navigateToFriend(person.id); }}
+                    tabindex="0"
+                    role="button"
+                >
+                    <div class="flex items-center justify-between w-full gap-2">
+                        <div class="flex items-center gap-2">
+                            <ProfilePic index={person.profile_pic_index} size={64} />
+                            <span>{person.name}</span>
+                        </div>
+                    </div>
+                </div>
+            {/each}
+        </div>
+    {/if}
 </div>

@@ -45,10 +45,10 @@ Examples:
   return result;
 }
 
-// Function to detect intent (search or create) from user input
+// Function to detect intent (search, create, or update) from user input
 export async function detectIntent(text: string): Promise<{ action: string; confidence: number }> {
   const intentPrompt = PromptTemplate.fromTemplate(`
-You are an AI assistant helping to determine if a user's input is a search query or a request to create a new person.
+You are an AI assistant helping to determine if a user's input is a search query, a request to create a new person, or a request to update an existing person.
 
 Given the following input:
 
@@ -57,6 +57,7 @@ Given the following input:
 Determine if this is:
 1. A search query (asking about existing people)
 2. A request to create a new person (providing information about someone to add)
+3. A request to update an existing person (adding/modifying information about someone who already exists)
 
 Return ONLY a JSON object in this exact format. Do not include markdown formatting, code blocks, or any other text:
 {{
@@ -65,12 +66,15 @@ Return ONLY a JSON object in this exact format. Do not include markdown formatti
 }}
 
 Where:
-- action must be either "search" or "create"
+- action must be either "search", "create", or "update"
 - confidence must be a number between 0 and 1
 
 Consider these patterns:
 - Questions like "who", "where", "find", "search" typically indicate a search
-- Statements with names and details typically indicate a create request
+- Statements with names and details for new people typically indicate a create request
+- Statements about adding information to, updating, or modifying existing people indicate an update
+- Phrases like "update John's", "add to Sarah's profile", "change Mike's", "John now works at" indicate updates
+- If the text mentions someone by name and adds new information about them, it's likely an update
 - If unsure, default to search
 `);
 
@@ -112,3 +116,40 @@ Return ONLY a valid JSON object in this exact format. Do not include markdown fo
 IMPORTANT: Return only the JSON object, no markdown backticks, no explanations, no additional text.
 `);
 } 
+
+// Function to get the update person prompt template
+export function updatePersonPrompt(): PromptTemplate {
+  return PromptTemplate.fromTemplate(`
+You are an AI assistant helping to update an existing person in a database.
+Given the following update request:
+
+{text}
+
+And the following list of existing people:
+
+{people}
+
+Please identify which person to update and what information to update:
+- personId (required, the id of the person to update from the people list)
+- name (optional, only if the name should be changed)
+- body (optional, additional description to add or replace)
+- intent (optional, must be one of: romantic, core, archive, new, invest, associate)
+- birthday (optional, in YYYY-MM-DD format)
+- mnemonic (optional, a memorable phrase or word)
+
+Only include fields that should be updated. If a field is not mentioned in the update request, do not include it in the response.
+
+Return ONLY a valid JSON object in this exact format. Do not include markdown formatting, code blocks, or any other text:
+
+{{
+  "personId": "string",
+  "name": "string or null",
+  "body": "string or null",
+  "intent": "string or null",
+  "birthday": "string or null",
+  "mnemonic": "string or null"
+}}
+
+IMPORTANT: Return only the JSON object, no markdown backticks, no explanations, no additional text.
+`);
+}
