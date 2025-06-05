@@ -1,5 +1,5 @@
 import { Person, Group, sequelize } from './models';
-import { Region, Intent } from './models/Person';
+import { Intent } from './models/Person';
 
 async function seed() {
   try {
@@ -12,84 +12,72 @@ async function seed() {
       name: 'Work'
     });
 
-    // Create Run Club group
-    const runClubGroup = await Group.create({
-      name: 'Run Club'
+    // Create Beet Club group
+    const beetClubGroup = await Group.create({
+      name: 'Beet Club'
     });
 
     // Create Work group members
     const michael = await Person.create({
       name: 'Michael Scott',
-      region: Region.SCRANTON,
-      county: 'Scranton',
-      body: 'World\'s Best Boss',
-      intent: Intent.NEW
+      body: 'World\'s Best Boss. My hero.',
+      intent: Intent.CORE
     });
 
     const pam = await Person.create({
       name: 'Pam Beesly',
-      region: Region.SCRANTON,
-      county: 'Scranton',
       body: 'Office Administrator',
-      intent: Intent.ROMANTIC
+      intent: Intent.INVEST
     });
 
     const creed = await Person.create({
       name: 'Creed Bratton',
-      region: Region.SCRANTON,
-      county: 'Scranton',
-      body: 'Quality Assurance',
+      body: 'Quality Assurance, even I think he\'s creepy.',
       intent: Intent.NEW
     });
 
-    // Create Run Club members
-    const steve = await Person.create({
-      name: 'Steve Prefontaine',
-      region: Region.UNCATEGORIZED,
-      county: 'Eugene',
-      body: 'Legendary Runner',
-      intent: Intent.NEW
+    // Create Beet Club members
+    const rolf = await Person.create({
+      name: 'Rolf Ahl',
+      body: 'Legendary Beeter',
+      intent: Intent.CORE
     });
 
-    const eliud = await Person.create({
-      name: 'Eliud Kipchoge',
-      region: Region.UNCATEGORIZED,
-      county: 'Nairobi',
-      body: 'Marathon World Record Holder',
-      intent: Intent.NEW
+    const mose = await Person.create({
+      name: 'Mose',
+      body: 'Legendary Beeter',
+      intent: Intent.CORE
     });
 
-    const joan = await Person.create({
-      name: 'Joan Benoit Samuelson',
-      region: Region.UNCATEGORIZED,
-      county: 'Portland',
-      body: 'First Women\'s Olympic Marathon Champion',
-      intent: Intent.NEW
+    const angela = await Person.create({
+      name: 'Angela Martin',
+      body: 'Office Administrator',
+      intent: Intent.ROMANTIC
     });
 
     // Create additional people
     const jan = await Person.create({
       name: 'Jan Levinson',
-      region: Region.SCRANTON,
-      county: 'Scranton',
       body: 'Former Dunder Mifflin VP',
       intent: Intent.ASSOCIATE
     });
 
     const edTruck = await Person.create({
       name: 'Ed Truck',
-      region: Region.SCRANTON,
-      county: 'Scranton',
-      body: 'Former Regional Manager',
+      body: 'Former Regional Manager, epic death',
       intent: Intent.ARCHIVE
     });
 
+    const david = await Person.create({
+        name: 'David Wallace',
+        body: 'Left the company.',
+        intent: Intent.ARCHIVE
+      });
+
     const jim = await Person.create({
       name: 'Jim Halpert',
-      region: Region.SCRANTON,
-      county: 'Scranton',
-      body: 'Sales Representative',
-      intent: Intent.CORE
+      body: 'Sales Representative, kinda mean to me sometimes.',
+      intent: Intent.INVEST
     });
 
     // Associate Work group members
@@ -99,9 +87,8 @@ async function seed() {
     await (jim as any).addGroup(workGroup);
 
     // Associate Run Club members
-    await (steve as any).addGroup(runClubGroup);
-    await (eliud as any).addGroup(runClubGroup);
-    await (joan as any).addGroup(runClubGroup);
+    await (rolf as any).addGroup(beetClubGroup);
+    await (mose as any).addGroup(beetClubGroup);
 
     // Create associations
     await (michael as any).addAssociatedPeople(jan);

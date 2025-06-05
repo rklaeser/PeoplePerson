@@ -3,52 +3,11 @@
 	import '../app.css';
 	import '../tailwind.css';
 	import type { Friend } from '$lib/types'; // Import the Friend interface
-
-	export let data: { people: Friend[] };
-
-
 </script>
 
-<div class="app">
-	<Header {data} />
-
-	<main>
+<div class="h-screen bg-gray-900 text-gray-100 p-10">
 		<slot />
-	</main>
-
-	<footer>
-	</footer>
 </div>
 
 <style>
-	.app {
-		display: flex;
-		flex-direction: column;
-		min-height: 100vh;
-	}
-
-	main {
-		flex: 1;
-		display: flex;
-		flex-direction: column;
-		padding: 1rem;
-		width: 100%;
-		max-width: 64rem;
-		margin: 0 auto;
-		box-sizing: border-box;
-	}
-
-	footer {
-		display: flex;
-		flex-direction: column;
-		justify-content: center;
-		align-items: center;
-		padding: 12px;
-	}
-	
-	@media (min-width: 480px) {
-		footer {
-			padding: 12px 0;
-		}
-	}
 </style>

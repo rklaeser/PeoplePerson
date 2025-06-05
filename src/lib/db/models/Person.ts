@@ -10,21 +10,9 @@ export enum Intent {
   ASSOCIATE = 'associate'
 }
 
-export enum Region {
-  MIDWEST = 'midwest',
-  BAY = 'bay',
-  TAHOE = 'tahoe',
-  SAC = 'sac',
-  SOCAL = 'socal',
-  SCRANTON = 'scranton',
-  UNCATEGORIZED = 'uncategorized'
-}
-
 export class Person extends Model {
   declare id: string;
   declare name: string;
-  declare region: Region;
-  declare county: string;
   declare body: string;
   declare intent: Intent;
   declare birthday: Date | null;
@@ -43,16 +31,6 @@ Person.init(
     name: {
       type: DataTypes.STRING,
       allowNull: false
-    },
-    region: {
-      type: DataTypes.ENUM(...Object.values(Region)),
-      allowNull: false,
-      defaultValue: Region.UNCATEGORIZED
-    },
-    county: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      defaultValue: 'uncategorized'
     },
     body: {
       type: DataTypes.TEXT,

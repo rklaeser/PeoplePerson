@@ -6,7 +6,6 @@ interface RawPerson {
   id: string;
   name: string;
   intent: string;
-  county: string;
   Groups?: Array<{
     id: string;
     name: string;
@@ -31,7 +30,6 @@ export async function load() {
       id: person.id,
       name: person.name,
       intent: person.intent,
-      county: person.county,
       group_id: person.Groups?.[0]?.id,
       group_name: person.Groups?.[0]?.name
     }));

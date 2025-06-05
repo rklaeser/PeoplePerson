@@ -20,12 +20,8 @@
 </script>
 
 <header class="flex items-center">
-	<div class="ml-4 mt-4">
-		<a href="/">
-			<img src={title} alt="Ship" />
-		</a>
-	</div>
-	
+	<div class="ml-4 mt-4"></div>
+	<button class="btn btn-primary">Click me</button>
 	{#if (expandSearch)}
 	<div class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-50"></div>
 	<div class="fixed top-6 flex justify-center w-full z-50">

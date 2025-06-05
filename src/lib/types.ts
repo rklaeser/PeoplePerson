@@ -1,8 +1,6 @@
 export interface Friend {
     id: string;
     name: string;
-    region: string;
-    county: string;
     group_id?: string;
     group_name?: string;
     body: string;

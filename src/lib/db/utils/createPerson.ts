@@ -1,10 +1,8 @@
-import { Person, Region, Intent } from '../models/Person';
+import { Person, Intent } from '../models/Person';
 import type { Friend } from '$lib/types';
 
 interface CreatePersonInput {
   name: string;
-  region?: Region;
-  county?: string;
   body?: string;
   intent?: Intent;
   birthday?: Date | null;
@@ -15,8 +13,6 @@ export async function createPerson(input: CreatePersonInput): Promise<Friend> {
   try {
     const person = await Person.create({
       name: input.name,
-      region: input.region || Region.UNCATEGORIZED,
-      county: input.county || 'uncategorized',
       body: input.body || 'Add a description',
       intent: input.intent || Intent.NEW,
       birthday: input.birthday || null,

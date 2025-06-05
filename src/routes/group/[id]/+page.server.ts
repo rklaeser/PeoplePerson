@@ -1,37 +1,50 @@
-import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import {db} from '$lib/db/client';
-import { people, associations, journal, statusEnum, groups, groupAssociations } from '$lib/db/schema';
-import { eq, and, exists, sql } from 'drizzle-orm';
+import { Group, Person } from '$lib/db/models';
+import type { Friend } from '$lib/types';
 import { fail } from '@sveltejs/kit';
 
-export const load: PageServerLoad = async ({ params}) => {
-    const id = params.id;
-    try{
-        const groupResult = await db.select().from(groups).where(eq(groups.id, id)).execute();
-        const group = groupResult[0];
 
-        const members = await db.select(
-            {
-                id: people.id,
-                name: people.name,
-                intent: people.intent,
-                county: people.county
-            }
-        )
-            .from(people)
-            .innerJoin(groupAssociations, eq(groupAssociations.person_id, people.id))
-            .where(eq(groupAssociations.group_id, id))
-            .execute();
-
-        console.log('🚀 Group fetched:', {group, members} );
-        return {group, people: members };
+export const load: PageServerLoad = async ({ params }) => {
+  const id = params.id;
+  try {
+    // Fetch the group by ID
+    const group = await Group.findByPk(id);
+    if (!group) {
+      throw new Error('Group not found');
     }
-    catch(error){
-        console.error('API POST Error:', error);
-        return fail(500, { error: 'Failed to add person' });
-    }    
-}
+
+    // Fetch people in the group (with all Friend fields)
+    const people = await Person.findAll({
+      include: [
+        {
+          model: Group,
+          where: { id },
+          through: { attributes: [] },
+          attributes: []
+        }
+      ]
+    });
+
+    // Map to Friend type
+    const friends: Friend[] = people.map(person => ({
+      id: person.id,
+      name: person.name,
+      body: person.body,
+      intent: person.intent,
+      birthday: person.birthday ? (typeof person.birthday === 'string' ? person.birthday : person.birthday?.toISOString().split('T')[0]) : null,
+      mnemonic: person.mnemonic,
+      createdAt: person.createdAt?.toISOString?.() ?? '',
+      updatedAt: person.updatedAt?.toISOString?.() ?? '',
+      group_id: group.id,
+      group_name: group.name
+    }));
+
+    return { group: { id: group.id, name: group.name }, people: friends };
+  } catch (error) {
+    console.error('Sequelize group page error:', error);
+    return fail(500, { error: 'Failed to fetch group or people' });
+  }
+};
 
 export const actions = {
     create: async ({ request }) => {
@@ -40,19 +53,16 @@ export const actions = {
       const group_id = data.get('groupId') as string;
       console.log('🚀 Creating person in group:', { name, group_id });
         try {
-            const newFriend = await db.insert(people).values({
+            const newFriend = await Person.create({
             name: name,
             intent: 'new'
-          }).returning({ insertedId: people.id });
+          });
           console.log('🚀 Person added:', name);
 
-          let person_id = newFriend[0].insertedId;
+          let person_id = newFriend.id;
         
         // Add person to group
-        await db.insert(groupAssociations).values({
-            person_id: person_id,
-            group_id: group_id
-        });
+        await (person_id as any).addGroup(group_id);
         console.log('🚀 Person added to group:', { person_id, group_id });
 
         } catch (error) {

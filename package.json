@@ -48,6 +48,7 @@
 		"@langchain/anthropic": "^0.3.21",
 		"@langchain/openai": "^0.5.11",
 		"carta-md": "^4.6.7",
+		"daisyui": "^5.0.43",
 		"debounce": "^2.2.0",
 		"dotenv": "^16.4.5",
 		"easymde": "^2.18.0",

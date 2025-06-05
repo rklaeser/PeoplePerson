@@ -23,7 +23,7 @@ Keep your response no more than 10 words. If you don't know the answer, return "
 `);
 
   const peopleList = people.map(person => 
-    `Name: ${person.name}\nDescription: ${person.body}\nIntent: ${person.intent}\nRegion: ${person.region}\n---`
+    `Name: ${person.name}\nDescription: ${person.body}\nIntent: ${person.intent}---`
   ).join('\n');
 
   const chain = RunnableSequence.from([
