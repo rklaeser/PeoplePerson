@@ -1,5 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
+    import { reload } from '$lib/stores/friends';
   
   
     let name = '';
@@ -41,6 +42,8 @@
           isSaving = false;
           return;
         }
+        // Reload the friends data
+        await reload();
         closeModal();
       } catch (e) {
         error = 'Failed to create friend';

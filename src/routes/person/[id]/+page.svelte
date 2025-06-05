@@ -18,8 +18,6 @@
                      journals: Journal[],
                     groupData: Group[] };
 
-  console.log('Friend Data:', data);
-
   let isEditing = false;
 
   function toggleEdit() {

@@ -1,10 +1,9 @@
 <script lang="ts">
-    import type { Friend, Group } from '$lib/types';
+    import type { Group } from '$lib/types';
     import '@fortawesome/fontawesome-free/css/all.css';
     import Table from './Table.svelte';
     import { slide, fade } from 'svelte/transition';
   
-    export let data: { people: Friend[], groups: Group[] };
     export let isOpen = false;
   
     function closeModal() {
@@ -42,7 +41,7 @@
           </button>
         </div>
         <div class="overflow-auto" style="height: calc(80vh - 4rem);">
-          <Table people={data.people} groups={data.groups}/>
+          <Table/>
         </div>
       </div>
     </div>

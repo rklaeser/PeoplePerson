@@ -1,12 +1,31 @@
 <script lang="ts">
   import FriendListModal from '$lib/components/FriendListModal.svelte';
   import CreateFriendModal from '$lib/components/CreateFriendModal.svelte';
+  import { goto } from '$app/navigation';
+  import arc from '$lib/images/arc.png';
+  import { onMount } from 'svelte';
+  import {reload } from '$lib/stores/friends';
 
   export let data;
 
   let inputMessage = '';
   let isProcessing = false;
-  let chatHistory: { role: 'user' | 'system', text: string }[] = [];
+  
+  // Updated chat history type to handle both text and friend data
+  let chatHistory: { 
+    role: 'user' | 'system', 
+    text?: string,
+    friendData?: {
+      id: string,
+      body: string,
+      intent: string,
+      name: string,
+      createdAt?: string,
+      updatedAt?: string,
+      mnemonic?: string | null
+    }
+  }[] = [];
+  
   let isModalOpen = false;
   let showChat = false;
   let isCreateModalOpen = false;
@@ -19,7 +38,7 @@
     
     try {
       isProcessing = true;
-      const response = await fetch('/api/process', {
+      const response = await fetch('/api/ai/route', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -33,8 +52,29 @@
         throw new Error(result.error || 'Failed to process request');
       }
 
-      // Add system response
-      chatHistory = [...chatHistory, { role: 'system', text: result.message }];
+      if (result.action === 'search') {
+        const personData = await fetch(`/api/person/${result.message}`);
+        const person = await personData.json();
+        console.log(person);
+        
+        // Add friend card to chat history
+        chatHistory = [...chatHistory, { 
+          role: 'system', 
+          friendData: {
+            id: person.friend.id,
+            name: person.friend.name, // or person.name if available
+            body: person.friend.body,
+            intent: person.friend.intent,
+            mnemonic: person.mnemonic
+          }
+        }];
+        console.log(chatHistory);
+
+      } else {
+        // Add regular text response
+        chatHistory = [...chatHistory, { role: 'system', text: result.message }];
+      }
+      
       inputMessage = ''; // Clear input
       
     } catch (e) {
@@ -60,21 +100,30 @@
     showChat = false;
   }
 
-const headers = [ 'You\'re a friend machine, Dwight', 
-                  'Another day, another friendship', 
-                  'All aboard the friend ship', 
-                ]
+  function handleFriendClick(friendId: string) {
+    goto(`/person/${friendId}`);
+  }
 
-function getHeader() {
-  return headers[Math.floor(Math.random() * headers.length)];
-}
+  const headers = [ 'You\'re a friend machine, Dwight', 
+                    'Another day, another friendship', 
+                    'All aboard the friend ship', 
+                  ]
 
+  function getHeader() {
+    return headers[Math.floor(Math.random() * headers.length)];
+  }
+
+  onMount(() => {
+    reload();
+  });
+  
 </script>
 
 {#if chatHistory.length === 0}
   <!-- Initial centered view -->
-  <div class="flex flex-col justify-center items-center h-full">
+  <div class="flex flex-col justify-start pt-20 items-center h-full">
     <div class="max-w-2xl w-full px-4">
+      <img src={arc} alt="The Friend Ship" class="w-1/3 mx-auto" />
       <h1 class="text-3xl font-bold text-center mb-8">{getHeader()}</h1>
       <div class="flex gap-2">
         <textarea
@@ -120,18 +169,43 @@ function getHeader() {
       <i class="fas fa-arrow-left"></i>
     </button>
     
-    <!-- Chat History - now only scrolls when needed -->
+    <!-- Chat History - now handles both text and friend cards -->
     <div class="flex-1 p-4 pt-16 overflow-y-auto">
       <div class="max-w-2xl mx-auto space-y-4">
         {#each chatHistory as msg}
           <div class="flex {msg.role === 'user' ? 'justify-end' : 'justify-start'}">
-            <div class="max-w-xs lg:max-w-md px-4 py-2 rounded-lg {
-              msg.role === 'user' 
-                ? 'bg-blue-500 text-white' 
-                : 'bg-gray-200 text-gray-800'
-            }">
-              {msg.text}
-            </div>
+            {#if msg.friendData}
+              <!-- Friend Card - Now clickable -->
+              <button
+                class="bg-white border border-gray-200 rounded-lg shadow-md p-4 max-w-sm hover:shadow-lg hover:border-blue-300 transition-all cursor-pointer text-left"
+                on:click={() => handleFriendClick(msg.friendData!.id)}
+              >
+                <div class="flex items-start justify-between mb-2">
+                  <h3 class="font-semibold text-lg text-gray-800">{msg.friendData.name}</h3>
+                  <span class="inline-block px-2 py-1 text-xs font-medium rounded-full {
+                    msg.friendData.intent === 'core' ? 'bg-blue-100 text-blue-800' :
+                    msg.friendData.intent === 'casual' ? 'bg-green-100 text-green-800' :
+                    'bg-gray-100 text-gray-800'
+                  }">
+                    {msg.friendData.intent}
+                  </span>
+                </div>
+                {#if msg.friendData.body}
+                  <p class="text-gray-600 text-sm leading-relaxed">
+                    {msg.friendData.body}
+                  </p>
+                {/if}
+              </button>
+            {:else}
+              <!-- Regular text message -->
+              <div class="max-w-xs lg:max-w-md px-4 py-2 rounded-lg {
+                msg.role === 'user' 
+                  ? 'bg-blue-500 text-white' 
+                  : 'bg-gray-200 text-gray-800'
+              }">
+                {msg.text}
+              </div>
+            {/if}
           </div>
         {/each}
       </div>
@@ -162,5 +236,5 @@ function getHeader() {
 {/if}
 
 <!-- USE TWO-WAY BINDING HERE -->
-<FriendListModal data={data} bind:isOpen={isModalOpen} />
+<FriendListModal bind:isOpen={isModalOpen} />
 <CreateFriendModal bind:isOpen={isCreateModalOpen} />

@@ -3,6 +3,9 @@
 	import type { Friend, Group } from '$lib/types'; // Import the Friend interface
 	import { intentImages } from '$lib/images/intentImages';
     import fallbackImage from '$lib/images/github.svg';
+    import ProfilePic from '$lib/components/ProfilePic.svelte';
+    import { friends, groups } from '$lib/stores/friends';
+    import { onMount } from 'svelte';
 
       let newName = '';
       let newIntent = 'new';
@@ -12,13 +15,11 @@
 	  let sortField: 'name' | 'createdAt' | 'updatedAt' = 'name';
 	  let sortDirection: 'asc' | 'desc' = 'asc';
 
-	  export let people: Friend[] = []; // Expecting a people array
-	  export let groups: Group[] = []; // Expecting a groups array
 	  export let groupId: string | null = null; // Optional group ID
 	  
 
       function navigateToFriend(id: string) {
-            goto(`/friend/${id}`);
+            goto(`/person/${id}`);
         }
 
 function handleSort(field: 'name' | 'createdAt' | 'updatedAt') {
@@ -41,9 +42,11 @@ async function handleDelete(event: Event) {
 	window.location.href = '/';
   }
 
-  $: filteredPeople = people.filter((person) => {
+  $: filteredPeople = $friends.filter((person) => {
     const statusMatch = selectedStatus === '' || person.intent === selectedStatus;
-    const groupMatch = selectedGroup === '' || person.group_id === selectedGroup;
+    // Update group filtering to work with Groups array
+    const groupMatch = selectedGroup === '' || 
+      (person.Groups && person.Groups.some(group => group.id === selectedGroup));
     return statusMatch && groupMatch;
   })
   .sort((a, b) => {
@@ -62,29 +65,54 @@ async function handleDelete(event: Event) {
     return sortDirection === 'asc' ? comparison : -comparison;
   });
 
+  // Group people by group when "All" is selected
+  $: groupedPeople = selectedGroup === '' 
+    ? filteredPeople.reduce((acc, person) => {
+        // Handle the Groups array - get the first group name or default to 'No Group'
+        const groupName = person.Groups && person.Groups.length > 0 
+          ? person.Groups[0].name 
+          : 'No Group';
+        if (!acc[groupName]) {
+          acc[groupName] = [];
+        }
+        acc[groupName].push(person);
+        return acc;
+      }, {} as Record<string, Friend[]>)
+    : { '': filteredPeople };
+
+  // Sort groups by name for consistent display
+  $: sortedGroupNames = selectedGroup === '' 
+    ? Object.keys(groupedPeople).sort()
+    : [''];
+
+    onMount(() => {
+        console.log($friends);
+        console.log($groups);
+    });
+
 </script>
 
 <div class="w-full">
     <div class="border-b border-gray-300 shadow-md overflow-hidden">
-        <div class="flex gap-x-4 px-4 py-3 text-left text-gray-600">
+        <div class="flex justify-center gap-x-4 px-4 py-3 text-white">
             <div class="flex items-center gap-2">
-                <span>Sort:</span>
-                <select 
-                    bind:value={sortField} 
-                    class="py-1 px-2 border border-gray-300 rounded"
-                    on:change={() => sortDirection = 'asc'}
-                >
-                    <option value="name">Name (A-Z)</option>
-                    <option value="createdAt">Last Created</option>
-                    <option value="updatedAt">Last Edited</option>
-                </select>
-                <button 
-                    class="p-1 hover:text-blue-600 transition-colors"
-					aria-label="Sort"
-                    on:click={() => sortDirection = sortDirection === 'asc' ? 'desc' : 'asc'}
-                >
-                    <i class="fas fa-sort-{sortDirection === 'asc' ? 'up' : 'down'}"></i>
-                </button>
+                    <span>Sort:</span>
+                    <select 
+                        bind:value={sortField} 
+                        class="py-1 px-2 border border-gray-300 rounded"
+                        on:change={() => sortDirection = 'asc'}
+                    >
+                        <option value="name">Name (A-Z)</option>
+                        <option value="createdAt">Last Created</option>
+                        <option value="updatedAt">Last Edited</option>
+                    </select>
+                    <button 
+                        class="p-1 hover:text-blue-600 transition-colors"
+                        aria-label="Sort"
+                        on:click={() => sortDirection = sortDirection === 'asc' ? 'desc' : 'asc'}
+                    >
+                        <i class="fas fa-sort-{sortDirection === 'asc' ? 'up' : 'down'}"></i>
+                    </button>
             </div>
             <div class="flex items-center gap-2">
                 <span>Status:</span>
@@ -98,11 +126,11 @@ async function handleDelete(event: Event) {
                     <option value="associate">Associate</option>
                 </select>
             </div>
-            <div class="flex items-center gap-2 flex-1">
+            <div class="flex items-center gap-2">
                 <span>Group:</span>
                 <select bind:value={selectedGroup} class="py-1 px-2 border border-gray-300 rounded">
                     <option value="">All</option>
-                    {#each groups as group}
+                    {#each $groups as group}
                         <option value={group.id}>{group.name}</option>
                     {/each}
                 </select>
@@ -115,45 +143,49 @@ async function handleDelete(event: Event) {
             <div class="w-12"></div>
         </div>
         <div>
-            {#each filteredPeople as person}
-                <div class="flex gap-x-4 px-4 py-2 border-b border-gray-300 hover:bg-gray-600 cursor-pointer items-center"
-				aria-label={`View ${person.name}'s profile`}
-					on:click={() => navigateToFriend(person.id)}
-					on:keydown={event => { if (event.key === 'Enter' || event.key === ' ') navigateToFriend(person.id); }}
-					tabindex="0"
-					role="button"
-					>
-                    <div class="flex items-center gap-2">
-                        <img
-                            src={intentImages[person.intent] || fallbackImage}
-                            alt={person.intent}
-                            class="inline-block w-8 h-18 align-middle"
-                        />
-                        <span>{person.name}</span>
+            {#each sortedGroupNames as groupName}
+                {#if selectedGroup === ''}
+                    <!-- Group Header -->
+                    <div class="bg-gray-200 px-4 py-2 font-semibold text-gray-700 border-b border-gray-300 sticky top-0">
+                        {groupName} ({groupedPeople[groupName].length})
                     </div>
-                    <div></div>
-                    <div class="truncate flex-1">{person.group_name}</div>
-                    {#if sortField === 'createdAt'}
-                        <div class="text-sm text-gray-600 w-[140px]">
-                            {new Date(person.createdAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}
+                {/if}
+                {#each groupedPeople[groupName] as person}
+                    <div class="flex gap-x-4 px-4 py-2 border-b border-gray-300 hover:bg-gray-600 cursor-pointer items-center"
+                    aria-label={`View ${person.name}'s profile`}
+                        on:click={() => navigateToFriend(person.id)}
+                        on:keydown={event => { if (event.key === 'Enter' || event.key === ' ') navigateToFriend(person.id); }}
+                        tabindex="0"
+                        role="button"
+                        >
+                        <div class="flex items-center justify-between w-full gap-2">
+                            <div class="flex items-center gap-2">
+                                <ProfilePic index={person.profile_pic_index} size={64} />
+                                <span>{person.name}</span>
+                            </div>
                         </div>
-                    {:else if sortField === 'updatedAt'}
-                        <div class="text-sm text-gray-600 w-[140px]">
-                            {new Date(person.updatedAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}
+                        {#if sortField === 'createdAt'}
+                            <div class="text-sm text-gray-600 w-[140px]">
+                                {new Date(person.createdAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}
+                            </div>
+                        {:else if sortField === 'updatedAt'}
+                            <div class="text-sm text-gray-600 w-[140px]">
+                                {new Date(person.updatedAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}
+                            </div>
+                        {/if}
+                        <div class="w-12">
+                            <form method="POST" action="?/delete" on:submit={handleDelete}>
+                                <input type="hidden" name="id" value={person.id}>
+                                <input type="hidden" name="name" value={person.name}>
+                                <button type="submit" class="text-gray-500 px-2 py-1" aria-label="Delete person">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </form>
                         </div>
-                    {/if}
-                    <div class="w-12">
-                        <form method="POST" action="?/delete" on:submit={handleDelete}>
-                            <input type="hidden" name="id" value={person.id}>
-                            <input type="hidden" name="name" value={person.name}>
-                            <button type="submit" class="text-gray-500 px-2 py-1" aria-label="Delete person">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
-                        </form>
                     </div>
-                </div>
+                {/each}
             {/each}
-            {#if people.length === 0}
+            {#if $friends.length === 0}
                 <div class="flex gap-x-4 px-4 py-2 text-center text-gray-500">
                     <div class="w-full">No data available</div>
                 </div>

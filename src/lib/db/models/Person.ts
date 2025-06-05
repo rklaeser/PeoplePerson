@@ -1,3 +1,4 @@
+// 1. Updated Person Model (models/Person.ts)
 import { Model, DataTypes } from 'sequelize';
 import { sequelize } from '../config';
 
@@ -17,6 +18,7 @@ export class Person extends Model {
   declare intent: Intent;
   declare birthday: Date | null;
   declare mnemonic: string | null;
+  declare profile_pic_index: number;
   declare createdAt: Date;
   declare updatedAt: Date;
 }
@@ -49,6 +51,15 @@ Person.init(
     mnemonic: {
       type: DataTypes.STRING,
       allowNull: true
+    },
+    profile_pic_index: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: () => Math.floor(Math.random() * 25), // Random index 0-24
+      validate: {
+        min: 0,
+        max: 24
+      }
     }
   },
   {
@@ -57,4 +68,4 @@ Person.init(
     tableName: 'people',
     timestamps: true
   }
-); 
+);

@@ -2,24 +2,12 @@ import { Person, Group, Journal } from '$lib/db/models';
 import { fail } from '@sveltejs/kit';
 import { json } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
+import { getPeopleNotAssociates, getGroups } from '$lib/utils/load';
 
 export const load: PageServerLoad = async () => {
 	try {
-		const people = await Person.findAll({
-			include: [
-				{
-					model: Group,
-					through: { attributes: [] }
-				},
-				{
-					model: Person,
-					as: 'AssociatedPeople',
-					through: { attributes: [] }
-				}
-			]
-		});
-
-		const groups = await Group.findAll();
+		const people = await getPeopleNotAssociates();
+		const groups = await getGroups();
 
 		return {
 			people: people.map(person => person.toJSON()),

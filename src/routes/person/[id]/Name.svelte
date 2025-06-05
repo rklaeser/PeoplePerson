@@ -2,7 +2,7 @@
     export let data;
     export let isEditing;
 
-
+    import ProfilePic from '$lib/components/ProfilePic.svelte';
     import { intentImages } from '$lib/images/intentImages';
     import fallbackImage from '$lib/images/github.svg';
 
@@ -23,11 +23,7 @@
 </script>
 
 <div class="flex flex-col items-center mt-8">   
-    <img
-      src={intentImages[data.friend.intent] || fallbackImage}
-      alt={data.friend.intent}
-      class="inline-block w-28 h-28 align-middle"
-    />
+    <ProfilePic index={data.friend.profile_pic_index} size={256} />
 </div>
 <div>
     <h1>{data.friend.name}</h1>

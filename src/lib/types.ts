@@ -9,6 +9,8 @@ export interface Friend {
     mnemonic: string | null;
     createdAt: string;
     updatedAt: string;
+    profile_pic_index: number;
+    Groups?: Group[];
 }
 
 export interface Group {
