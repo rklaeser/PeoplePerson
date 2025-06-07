@@ -32,3 +32,19 @@ export interface Associate {
     name: string;
     intent: string;
 }
+
+export interface ChatButton {
+    text: string;
+    action: 'update' | 'create_new' | string;
+    personId?: string;
+    personData?: any;
+  }
+  
+  export interface ChatMessage {
+    role: 'user' | 'system';
+    success: boolean;
+    action: 'create' | 'update' | 'error' | 'clarify' | 'clarify_create' | string;
+    message: string;
+    people: Friend[];
+    buttons?: ChatButton[];
+  }

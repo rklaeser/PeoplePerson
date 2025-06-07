@@ -5,26 +5,15 @@
   import arc from '$lib/images/arc.png';
   import { onMount } from 'svelte';
   import {reload } from '$lib/stores/friends';
+  import type { ChatMessage } from '$lib/types';
 
   export let data;
 
   let inputMessage = '';
   let isProcessing = false;
   
-  // Updated chat history type to handle both text and friend data
-  let chatHistory: { 
-    role: 'user' | 'system', 
-    text?: string,
-    friendData?: {
-      id: string,
-      body: string,
-      intent: string,
-      name: string,
-      createdAt?: string,
-      updatedAt?: string,
-      mnemonic?: string | null
-    }
-  }[] = [];
+  // Updated chat history type to use ChatMessage interface
+  let chatHistory: ChatMessage[] = [];
   
   let isModalOpen = false;
   let showChat = false;
@@ -33,57 +22,153 @@
   async function handleSubmit() {
     if (!inputMessage.trim()) return;
     
+    const currentMessage = inputMessage;
+    
     // Add user message
-    chatHistory = [...chatHistory, { role: 'user', text: inputMessage }];
+    chatHistory = [...chatHistory, { 
+      role: 'user',
+      success: true,
+      action: 'message',
+      message: currentMessage,
+      people: []
+    }];
+    
+    inputMessage = ''; // Clear input immediately
+    isProcessing = true;
     
     try {
-      isProcessing = true;
+      // Use EventSource for SSE
+      const eventSource = new EventSource('/api/ai/route', {
+        // Note: EventSource doesn't support POST directly, so we'll use a different approach
+      });
+      
+      // Alternative: Use fetch with streaming
       const response = await fetch('/api/ai/route', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Accept': 'text/event-stream',
         },
-        body: JSON.stringify({ text: inputMessage })
+        body: JSON.stringify({ text: currentMessage })
       });
 
-      const result = await response.json();
-      
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to process request');
+        throw new Error('Failed to process request');
       }
 
-      if (result.action === 'search') {
-        const personData = await fetch(`/api/person/${result.message}`);
-        const person = await personData.json();
-        console.log(person);
-        
-        // Add friend card to chat history
-        chatHistory = [...chatHistory, { 
-          role: 'system', 
-          friendData: {
-            id: person.friend.id,
-            name: person.friend.name, // or person.name if available
-            body: person.friend.body,
-            intent: person.friend.intent,
-            mnemonic: person.mnemonic
-          }
-        }];
-        console.log(chatHistory);
-
-      } else {
-        // Add regular text response
-        chatHistory = [...chatHistory, { role: 'system', text: result.message }];
-      }
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
       
-      inputMessage = ''; // Clear input
+      if (!reader) {
+        throw new Error('No response stream available');
+      }
+
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) break;
+        
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const eventData = JSON.parse(line.slice(6));
+              
+              if (eventData.type === 'annotation') {
+                // Immediately add the routing annotation
+                chatHistory = [...chatHistory, eventData.data];
+              } else if (eventData.type === 'result') {
+                // Add the final result
+                chatHistory = [...chatHistory, eventData.data];
+              }
+            } catch (e) {
+              console.error('Error parsing SSE data:', e);
+            }
+          }
+        }
+      }
       
     } catch (e) {
       chatHistory = [...chatHistory, { 
         role: 'system', 
-        text: e instanceof Error ? e.message : 'Error processing request' 
+        success: false,
+        action: 'error',
+        message: e instanceof Error ? e.message : 'Error processing request',
+        people: []
       }];
     } finally {
       isProcessing = false;
+    }
+  }
+
+  async function handleButtonClick(button: any) {
+    if (button.action === 'update') {
+      // Navigate to update the existing person
+      goto(`/person/${button.personId}`);
+    } else if (button.action === 'create_new') {
+      // Create the new person with the stored data
+      isProcessing = true;
+      
+      try {
+        const response = await fetch('/api/person', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            text: `create new friend ${button.personData.name}`,
+            forceCreate: true,
+            personData: button.personData
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to create new friend');
+        }
+
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
+        
+        if (!reader) {
+          throw new Error('No response stream available');
+        }
+
+        while (true) {
+          const { done, value } = await reader.read();
+          
+          if (done) break;
+          
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n');
+          
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const eventData = JSON.parse(line.slice(6));
+                
+                if (eventData.type === 'result') {
+                  chatHistory = [...chatHistory, eventData.data];
+                }
+              } catch (e) {
+                console.error('Error parsing SSE data:', e);
+              }
+            }
+          }
+        }
+        
+      } catch (e) {
+        chatHistory = [...chatHistory, { 
+          role: 'system', 
+          success: false,
+          action: 'error',
+          message: e instanceof Error ? e.message : 'Error creating new friend',
+          people: []
+        }];
+      } finally {
+        isProcessing = false;
+      }
     }
   }
 
@@ -105,8 +190,8 @@
   }
 
   const headers = [ 'You\'re a friend machine, Dwight', 
-                    'Another day, another friendship', 
-                    'All aboard the friend ship', 
+                    'Welcome back, Dwight', 
+                    'All aboard the friendship, Dwight', 
                   ]
 
   function getHeader() {
@@ -116,7 +201,7 @@
   onMount(() => {
     reload();
   });
-  
+
 </script>
 
 {#if chatHistory.length === 0}
@@ -169,41 +254,184 @@
       <i class="fas fa-arrow-left"></i>
     </button>
     
-    <!-- Chat History - now handles both text and friend cards -->
+    <!-- Chat History - now handles text, friend cards, buttons, and annotations -->
     <div class="flex-1 p-4 pt-16 overflow-y-auto">
       <div class="max-w-2xl mx-auto space-y-4">
         {#each chatHistory as msg}
           <div class="flex {msg.role === 'user' ? 'justify-end' : 'justify-start'}">
-            {#if msg.friendData}
-              <!-- Friend Card - Now clickable -->
-              <button
-                class="bg-white border border-gray-200 rounded-lg shadow-md p-4 max-w-sm hover:shadow-lg hover:border-blue-300 transition-all cursor-pointer text-left"
-                on:click={() => handleFriendClick(msg.friendData!.id)}
-              >
-                <div class="flex items-start justify-between mb-2">
-                  <h3 class="font-semibold text-lg text-gray-800">{msg.friendData.name}</h3>
-                  <span class="inline-block px-2 py-1 text-xs font-medium rounded-full {
-                    msg.friendData.intent === 'core' ? 'bg-blue-100 text-blue-800' :
-                    msg.friendData.intent === 'casual' ? 'bg-green-100 text-green-800' :
-                    'bg-gray-100 text-gray-800'
-                  }">
-                    {msg.friendData.intent}
-                  </span>
+            
+            {#if msg.role === 'annotation'}
+              <!-- Annotation styling - small gray text on the left -->
+              <div class="max-w-xs lg:max-w-md px-3 py-1 text-xs text-gray-500 italic">
+                {msg.message}
+              </div>
+            
+            {:else if msg.action === 'clarify_create' && msg.buttons}
+              <!-- Special handling for clarify_create with buttons -->
+              <div class="flex flex-col max-w-md">
+                <div class="px-4 py-2 rounded-lg bg-yellow-50 border border-yellow-200 text-gray-800 mb-3">
+                  {msg.message}
                 </div>
-                {#if msg.friendData.body}
-                  <p class="text-gray-600 text-sm leading-relaxed">
-                    {msg.friendData.body}
-                  </p>
+                
+                <!-- Show existing people if any -->
+                {#if msg.people && msg.people.length > 0}
+                  {#each msg.people as person}
+                    <div class="bg-white border border-gray-200 rounded-lg shadow-md p-4 mb-2">
+                      <div class="flex items-start justify-between mb-2">
+                        <h3 class="font-semibold text-lg text-gray-800">{person.name}</h3>
+                        <span class="inline-block px-2 py-1 text-xs font-medium rounded-full {
+                          person.intent === 'core' ? 'bg-blue-100 text-blue-800' :
+                          person.intent === 'casual' ? 'bg-green-100 text-green-800' :
+                          'bg-gray-100 text-gray-800'
+                        }">
+                          {person.intent || 'new'}
+                        </span>
+                      </div>
+                      {#if person.body}
+                        <p class="text-gray-600 text-sm leading-relaxed">
+                          {person.body}
+                        </p>
+                      {/if}
+                      <p class="text-xs text-gray-500 mt-2">
+                        {person.mnemonic || 'not the composer'}
+                      </p>
+                    </div>
+                  {/each}
                 {/if}
-              </button>
+                
+                <!-- Action buttons -->
+                <div class="flex gap-2 mt-2">
+                  {#each msg.buttons as button}
+                    <button
+                      on:click={() => handleButtonClick(button)}
+                      disabled={isProcessing}
+                      class="px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed {
+                        button.action === 'update' 
+                          ? 'bg-blue-500 text-white hover:bg-blue-600' 
+                          : 'bg-green-500 text-white hover:bg-green-600'
+                      }"
+                    >
+                      {button.text}
+                    </button>
+                  {/each}
+                </div>
+              </div>
+              
+            {:else if msg.action === 'clarify_create' && msg.buttons}
+              <!-- Special handling for clarify_create with buttons -->
+              <div class="flex flex-col max-w-md">
+                <div class="px-4 py-2 rounded-lg bg-yellow-50 border border-yellow-200 text-gray-800 mb-3">
+                  {msg.message}
+                </div>
+                
+                <!-- Show existing people if any -->
+                {#if msg.people && msg.people.length > 0}
+                  {#each msg.people as person}
+                    <div class="bg-white border border-gray-200 rounded-lg shadow-md p-4 mb-2">
+                      <div class="flex items-start justify-between mb-2">
+                        <h3 class="font-semibold text-lg text-gray-800">{person.name}</h3>
+                        <span class="inline-block px-2 py-1 text-xs font-medium rounded-full {
+                          person.intent === 'core' ? 'bg-blue-100 text-blue-800' :
+                          person.intent === 'casual' ? 'bg-green-100 text-green-800' :
+                          'bg-gray-100 text-gray-800'
+                        }">
+                          {person.intent || 'new'}
+                        </span>
+                      </div>
+                      {#if person.body}
+                        <p class="text-gray-600 text-sm leading-relaxed">
+                          {person.body}
+                        </p>
+                      {/if}
+                      <p class="text-xs text-gray-500 mt-2">
+                        {person.mnemonic || 'not the composer'}
+                      </p>
+                    </div>
+                  {/each}
+                {/if}
+                
+                <!-- Action buttons -->
+                <div class="flex gap-2 mt-2">
+                  {#each msg.buttons as button}
+                    <button
+                      on:click={() => handleButtonClick(button)}
+                      disabled={isProcessing}
+                      class="px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed {
+                        button.action === 'update' 
+                          ? 'bg-blue-500 text-white hover:bg-blue-600' 
+                          : 'bg-green-500 text-white hover:bg-green-600'
+                      }"
+                    >
+                      {button.text}
+                    </button>
+                  {/each}
+                </div>
+              </div>
+              
+            {:else if msg.people && msg.people.length > 0}
+              <div class="flex flex-col">
+                <div class="max-w-xs lg:max-w-md px-4 py-2 rounded-lg {
+                  msg.role === 'user' 
+                    ? 'bg-blue-500 text-white' 
+                    : 'bg-gray-200 text-gray-800'
+                }">
+                  {msg.message}
+                </div>
+                {#each msg.people as person}
+                  <button
+                    class="bg-white border border-gray-200 rounded-lg shadow-md p-4 max-w-sm hover:shadow-lg hover:border-blue-300 transition-all cursor-pointer text-left {
+                      msg.action === 'clarify' ? 'mt-2 border-orange-200 hover:border-orange-400' : ''
+                    }"
+                    on:click={() => {
+                      if (msg.action === 'clarify') {
+                        // Handle clarification click - send a more specific message
+                        inputMessage = `Update ${person.name} (${person.mnemonic || person.id})`;
+                      } else {
+                        handleFriendClick(person.id);
+                      }
+                    }}
+                  >
+                    <div class="flex items-start justify-between mb-2">
+                      <h3 class="font-semibold text-lg text-gray-800">{person.name}</h3>
+                      <div class="flex flex-col items-end gap-1">
+                        <span class="inline-block px-2 py-1 text-xs font-medium rounded-full {
+                          person.intent === 'core' ? 'bg-blue-100 text-blue-800' :
+                          person.intent === 'casual' ? 'bg-green-100 text-green-800' :
+                          'bg-gray-100 text-gray-800'
+                        }">
+                          {person.intent}
+                        </span>
+                        {#if msg.action === 'clarify' && person.mnemonic}
+                          <span class="text-xs text-gray-500 italic">
+                            {person.mnemonic}
+                          </span>
+                        {/if}
+                      </div>
+                    </div>
+                    {#if person.body}
+                      <p class="text-gray-600 text-sm leading-relaxed">
+                        {person.body}
+                      </p>
+                    {/if}
+                    {#if msg.action === 'clarify'}
+                      <p class="text-xs text-orange-600 mt-2 font-medium">
+                        Click to select this person
+                      </p>
+                    {/if}
+                  </button>
+                {/each}
+              </div>
+
             {:else}
               <!-- Regular text message -->
               <div class="max-w-xs lg:max-w-md px-4 py-2 rounded-lg {
                 msg.role === 'user' 
                   ? 'bg-blue-500 text-white' 
-                  : 'bg-gray-200 text-gray-800'
+                  : msg.role === 'system'
+                    ? 'bg-gray-200 text-gray-800'
+                    : 'bg-gray-200 text-gray-800'
               }">
-                {msg.text}
+                {msg.message}
               </div>
             {/if}
           </div>

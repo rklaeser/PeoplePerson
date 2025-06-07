@@ -16,7 +16,7 @@
 
   function navigateToFriend(id: string) {
             query = '';
-            goto(`/friend/${id}`);
+            goto(`/person/${id}`);
         }
   let results: Friend[] = $state([]);
   let query = $state('');

@@ -7,7 +7,7 @@
 	let newAssociateName: string = '';
 
 	function navigateToFriend(id: string) {
-    	goto(`/friend/${id}`);
+    	goto(`/person/${id}`);
   	}
 </script>
 

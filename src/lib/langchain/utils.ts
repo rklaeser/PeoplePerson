@@ -1,45 +1,66 @@
 import { model } from './config';
-import { PromptTemplate } from '@langchain/core/prompts';
 import { StringOutputParser } from '@langchain/core/output_parsers';
 import { RunnableSequence } from '@langchain/core/runnables';
+import { z } from 'zod';
 import type { Friend } from '$lib/types';
+import { identifyPersonPrompt } from './prompts/identifyPerson';
+import { detectIntentPrompt } from './prompts/detectIntent';
+import { extractPersonDataPrompt } from './prompts/extractPersonData';
+import { extractUpdateDataPrompt } from './prompts/extractUpdateData';
 
-// Function to find people based on a description
-export async function findPerson(description: string, people: Friend[]) {
-  const prompt = PromptTemplate.fromTemplate(`
-You are an AI assistant helping to find people based on descriptions.
-Given the following list of people and their descriptions:
+// Zod schemas for structured outputs
+const IntentDetectionSchema = z.object({
+  action: z.enum(['search', 'create', 'update']),
+  confidence: z.number().min(0).max(1)
+});
 
-{peopleList}
+const CreatePersonSchema = z.object({
+  name: z.string(),
+  body: z.string().nullable(),
+  intent: z.enum(['romantic', 'core', 'archive', 'new', 'invest', 'associate']).nullable(),
+  birthday: z.string().nullable(), // Should be YYYY-MM-DD format
+  mnemonic: z.string().nullable()
+});
 
-And this search description:
-{description}
+const UpdatePersonSchema = z.object({
+  personId: z.string(),
+  name: z.string().nullable(),
+  body: z.string().nullable(),
+  intent: z.enum(['romantic', 'core', 'archive', 'new', 'invest', 'associate']).nullable(),
+  birthday: z.string().nullable(), // Should be YYYY-MM-DD format
+  mnemonic: z.string().nullable()
+});
 
-Please identify the person or people who best match this description.
-Return ONLY the IDs of the matching people, separated by commas if there are multiple matches.
-If no one matches, return 0.
-If you're not sure, return -1.
+const FindPersonSchema = z.object({
+  matchedIds: z.array(z.string()),
+  confidence: z.enum(['certain', 'uncertain', 'no_matches'])
+});
 
-Examples:
-- Single match: "123"
-- Multiple matches: "123,456,789"
-- No matches: "0"
-- Uncertain: "-1"
-`);
+const IdentifyPersonSchema = z.object({
+  action: z.enum(['search', 'create', 'update', 'clarify']),
+  matchedIds: z.array(z.string()),
+  confidence: z.enum(['certain', 'uncertain', 'no_matches', 'multiple_matches']),
+  reasoning: z.string(),
+  needsClarification: z.boolean()
+});
 
+// Shared function to identify people based on user input and detected intent
+export async function identifyPerson(text: string, action: string, people: Friend[]) {
   const peopleList = people.map(person => 
-    `ID: ${person.id}\nName: ${person.name}\nDescription: ${person.body}\nIntent: ${person.intent}---`
-  ).join('\n');
+    `ID: ${person.id}\nName: ${person.name}\nDescription: ${person.body}\nIntent: ${person.intent}\nMnemonic: ${person.mnemonic || 'none'}`
+  ).join('\n---\n');
+
+  const structuredModel = model.withStructuredOutput(IdentifyPersonSchema);
 
   const chain = RunnableSequence.from([
-    prompt,
-    model,
-    new StringOutputParser(),
+    identifyPersonPrompt,
+    structuredModel,
   ]);
 
   const result = await chain.invoke({
-    peopleList,
-    description
+    text,
+    action,
+    peopleList
   });
 
   return result;
@@ -47,109 +68,44 @@ Examples:
 
 // Function to detect intent (search, create, or update) from user input
 export async function detectIntent(text: string): Promise<{ action: string; confidence: number }> {
-  const intentPrompt = PromptTemplate.fromTemplate(`
-You are an AI assistant helping to determine if a user's input is a search query, a request to create a new person, or a request to update an existing person.
-
-Given the following input:
-
-{text}
-
-Determine if this is:
-1. A search query (asking about existing people)
-2. A request to create a new person (providing information about someone to add)
-3. A request to update an existing person (adding/modifying information about someone who already exists)
-
-Return ONLY a JSON object in this exact format. Do not include markdown formatting, code blocks, or any other text:
-{{
-  "action": "search",
-  "confidence": 0.95
-}}
-
-Where:
-- action must be either "search", "create", or "update"
-- confidence must be a number between 0 and 1
-
-Consider these patterns:
-- Questions like "who", "where", "find", "search" typically indicate a search
-- Statements with names and details for new people typically indicate a create request
-- Statements about adding information to, updating, or modifying existing people indicate an update
-- Phrases like "update John's", "add to Sarah's profile", "change Mike's", "John now works at" indicate updates
-- If the text mentions someone by name and adds new information about them, it's likely an update
-- If unsure, default to search
-`);
+  const structuredModel = model.withStructuredOutput(IntentDetectionSchema);
 
   const intentChain = RunnableSequence.from([
-    intentPrompt,
-    model,
-    new StringOutputParser(),
+    detectIntentPrompt,
+    structuredModel,
   ]);
 
-  const intentResult = await intentChain.invoke({ text });
-  return JSON.parse(intentResult);
+  const result = await intentChain.invoke({ text });
+  return result;
 }
 
-// Function to get the create person prompt template
-export function createPersonPrompt(): PromptTemplate {
-  return PromptTemplate.fromTemplate(`
-You are an AI assistant helping to create a new person in a database.
-Given the following description:
+// Function to extract person creation data with structured output
+export async function extractPersonData(text: string) {
+  const structuredModel = model.withStructuredOutput(CreatePersonSchema);
 
-{text}
+  const chain = RunnableSequence.from([
+    extractPersonDataPrompt,
+    structuredModel,
+  ]);
 
-Please extract the following information in a structured format:
-- name (required)
-- body (optional, description of the person). If there information provided about the person does not fit into another field, put it here.
-- intent (optional, must be one of: romantic, core, archive, new, invest, associate). If none, default to new.
-- birthday (optional, in YYYY-MM-DD format). If none, default to null's date.
-- mnemonic (optional, a memorable phrase or word). If none, create a mnemonic using three or fewer words for the person based off the name and any other information provided.
+  return await chain.invoke({ text });
+}
 
-Return ONLY a valid JSON object in this exact format. Do not include markdown formatting, code blocks, or any other text:
+// Function to extract person update data with structured output
+export async function extractUpdateData(text: string, people: Friend[]) {
+  const peopleList = people.map(person => 
+    `ID: ${person.id}\nName: ${person.name}\nDescription: ${person.body}\nIntent: ${person.intent}`
+  ).join('\n---\n');
 
-{{
-  "name": "string",
-  "body": "string or null",
-  "intent": "string or null",
-  "birthday": "string or null",
-  "mnemonic": "string or null"
-}}
+  const structuredModel = model.withStructuredOutput(UpdatePersonSchema);
 
-IMPORTANT: Return only the JSON object, no markdown backticks, no explanations, no additional text.
-`);
-} 
+  const chain = RunnableSequence.from([
+    extractUpdateDataPrompt,
+    structuredModel,
+  ]);
 
-// Function to get the update person prompt template
-export function updatePersonPrompt(): PromptTemplate {
-  return PromptTemplate.fromTemplate(`
-You are an AI assistant helping to update an existing person in a database.
-Given the following update request:
-
-{text}
-
-And the following list of existing people:
-
-{people}
-
-Please identify which person to update and what information to update:
-- personId (required, the id of the person to update from the people list)
-- name (optional, only if the name should be changed)
-- body (optional, additional description to add or replace)
-- intent (optional, must be one of: romantic, core, archive, new, invest, associate)
-- birthday (optional, in YYYY-MM-DD format)
-- mnemonic (optional, a memorable phrase or word)
-
-Only include fields that should be updated. If a field is not mentioned in the update request, do not include it in the response.
-
-Return ONLY a valid JSON object in this exact format. Do not include markdown formatting, code blocks, or any other text:
-
-{{
-  "personId": "string",
-  "name": "string or null",
-  "body": "string or null",
-  "intent": "string or null",
-  "birthday": "string or null",
-  "mnemonic": "string or null"
-}}
-
-IMPORTANT: Return only the JSON object, no markdown backticks, no explanations, no additional text.
-`);
+  return await chain.invoke({ 
+    text,
+    people: peopleList 
+  });
 }

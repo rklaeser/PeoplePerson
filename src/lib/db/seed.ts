@@ -65,8 +65,15 @@ async function seed() {
     const jan = await Person.create({
       name: 'Jan Levinson',
       body: 'Former Dunder Mifflin VP',
-      intent: Intent.ASSOCIATE,
+      intent: Intent.CORE,
       profile_pic_index: 6
+    });
+
+    const hunter = await Person.create({
+      name: 'Hunter',
+      body: 'Jan\'s former assistant',
+      intent: Intent.ASSOCIATE,
+      profile_pic_index: 7
     });
 
     const edTruck = await Person.create({
@@ -98,13 +105,14 @@ async function seed() {
     await (edTruck as any).addGroup(workGroup);
     await (david as any).addGroup(workGroup);
     await (angela as any).addGroup(workGroup);
+    await (jan as any).addGroup(workGroup);
 
     // Associate Run Club members
     await (rolf as any).addGroup(beetClubGroup);
     await (mose as any).addGroup(beetClubGroup);
 
     // Create associations
-    await (michael as any).addAssociatedPeople(jan);
+    await (jan as any).addAssociatedPeople(hunter);
 
     console.log('Database seeded successfully with Work and Run Club groups');
   } catch (error) {

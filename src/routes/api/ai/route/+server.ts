@@ -1,181 +1,171 @@
+// src/routes/api/person/+server.ts
 import { json } from '@sveltejs/kit';
-import { model } from '$lib/langchain/config';
-import { PromptTemplate } from '@langchain/core/prompts';
-import { StringOutputParser } from '@langchain/core/output_parsers';
-import { RunnableSequence } from '@langchain/core/runnables';
-import { createPerson } from '$lib/db/utils/createPerson';
-import { findPerson, detectIntent, createPersonPrompt, updatePersonPrompt } from '$lib/langchain/utils';
-import { Person } from '$lib/db/models/Person';
-import { Intent } from '$lib/db/models/Person';
-import type { Friend } from '$lib/types';
-
-interface PersonWithAssociates extends Person {
-  AssociatedPeople?: PersonWithAssociates[];
-}
+import { detectIntent, identifyPerson } from '$lib/langchain/utils';
+import { PersonService } from '$lib/services/personService.server';
+import { PersonSearchHandler } from '$lib/handlers/personSearchHandler';
+import { PersonUpdateHandler } from '$lib/handlers/personUpdateHandler';
+import { PersonCreateHandler } from '$lib/handlers/personCreateHandler';
+import type { ChatMessage } from '$lib/types';
 
 export async function POST({ request }) {
-  try {
-    const { text } = await request.json();
+  const { text } = await request.json();
+  
+  // Create a readable stream for SSE
+  const stream = new ReadableStream({
+    async start(controller) {
+      try {
 
-    // Use the new detectIntent utility
-    const { action, confidence } = await detectIntent(text);
-
-    // If it's a search request
-    if (action === 'search' || confidence < 0.7) {
-      const people = await Person.findAll({
-        include: [
-          {
-            model: Person,
-            as: 'AssociatedPeople',
-            through: { attributes: [] }
+        const thinkingData = JSON.stringify({
+          type: 'annotation',
+          data: {
+            role: 'annotation',
+            success: true,
+            action: 'route',
+            message: `Thinking...`,
+            people: []
           }
-        ]
-      }) as PersonWithAssociates[];
+        });
+        controller.enqueue(`data: ${thinkingData}\n\n`);
 
-      // Convert Person objects to Friend objects
-      const friends: Friend[] = people.map(person => ({
-        ...person.toJSON(),
-        birthday: person.birthday ? person.birthday.toISOString().split('T')[0] : null,
-        associates: person.AssociatedPeople?.map(associate => ({
-          ...associate.toJSON(),
-          birthday: associate.birthday ? associate.birthday.toISOString().split('T')[0] : null
-        }))
-      }));
+        // Step 1: Detect intent and immediately stream the routing decision
+        const { action, confidence } = await detectIntent(text);
 
-      const results = await findPerson(text, friends);
-      return json({
-        success: true,
-        action: 'search',
-        message: results
-      });
-    }
-
-    // If it's an update request
-    if (action === 'update') {
-      const people = await Person.findAll({
-        include: [
-          {
-            model: Person,
-            as: 'AssociatedPeople',
-            through: { attributes: [] }
+        const intentData = JSON.stringify({
+          type: 'annotation',
+          data: {
+            role: 'annotation',
+            success: true,
+            action: 'route',
+            message: `Intent: ${action} (${confidence.toFixed(2)})`,
+            people: []
           }
-        ]
-      }) as PersonWithAssociates[];
-
-      // Convert Person objects to Friend objects
-      const friends: Friend[] = people.map(person => ({
-        ...person.toJSON(),
-        birthday: person.birthday ? person.birthday.toISOString().split('T')[0] : null,
-        associates: person.AssociatedPeople?.map(associate => ({
-          ...associate.toJSON(),
-          birthday: associate.birthday ? associate.birthday.toISOString().split('T')[0] : null
-        }))
-      }));
-
-      const updatePrompt = updatePersonPrompt();
-
-      const updateChain = RunnableSequence.from([
-        updatePrompt,
-        model,
-        new StringOutputParser(),
-      ]);
-
-      const result = await updateChain.invoke({ text, people: JSON.stringify(friends) });
-      const updateData = JSON.parse(result);
-      console.log('updateData', updateData);
-
-      if (!updateData.personId) {
-        return json({
-          success: false,
-          action: 'update',
-          message: 'Could not identify which person to update'
         });
-      }
+        controller.enqueue(`data: ${intentData}\n\n`);
+        
+        // Early confidence check - don't attempt processing if confidence is too low
+        if (confidence < 0.5) {
+          // Send annotation about low confidence
+          const annotationData = JSON.stringify({
+            type: 'annotation',
+            data: {
+              role: 'annotation',
+              success: true,
+              action: 'route',
+              message: `Low confidence (${confidence.toFixed(2)}) - skipping processing`,
+              people: []
+            }
+          });
+          controller.enqueue(`data: ${annotationData}\n\n`);
+          
+          // Send immediate response without attempting handlers
+          const resultData = JSON.stringify({
+            type: 'result',
+            data: {
+              role: 'system',
+              success: false,
+              action: 'error',
+              message: 'I\'m not sure I can help with that.',
+              people: []
+            }
+          });
+          controller.enqueue(`data: ${resultData}\n\n`);
+          controller.close();
+          return;
+        }
 
+        // Step 2: Get all friends for person identification
+        const allFriends = await PersonService.getAllFriends();
 
-      // Find the person to update
-      const personToUpdate = await Person.findByPk(updateData.personId);
-      if (!personToUpdate) {
-        return json({
-          success: false,
-          action: 'update',
-          message: 'Person not found'
+        // Step 3: Identify people based on the detected intent
+        const identification = await identifyPerson(text, action, allFriends);
+        
+        // Send identification annotation
+        const identificationData = JSON.stringify({
+          type: 'annotation',
+          data: {
+            role: 'annotation',
+            success: true,
+            action: 'identify',
+            message: `${identification.reasoning} (${identification.matchedIds.length} matches, ${identification.confidence})`,
+            people: []
+          }
         });
+        controller.enqueue(`data: ${identificationData}\n\n`);
+
+        // Step 4: Route to the appropriate handler based on final action
+        const finalAction = identification.action;
+        let result: ChatMessage;
+        
+        // Store the original detected intent for create operations
+        const originalIntent = action;
+        
+        if (finalAction === 'clarify') {
+          // Check if the original intent was 'create' - if so, let PersonCreateHandler handle it
+          if (originalIntent === 'create') {
+            result = await PersonCreateHandler.handle(text, identification);
+          } else {
+            // Handle clarification case for other intents - show multiple matches and ask user to specify
+            const matchedFriends = allFriends.filter(friend => 
+              identification.matchedIds.includes(friend.id)
+            );
+            
+            result = {
+              role: 'system',
+              success: true,
+              action: 'clarify',
+              message: `I found multiple people with that name. Which one did you mean?`,
+              people: matchedFriends
+            };
+          }
+        } else if (finalAction === 'search') {
+          result = await PersonSearchHandler.handle(text, identification);
+        } else if (finalAction === 'update') {
+          result = await PersonUpdateHandler.handle(text, identification);
+        } else if (finalAction === 'create') {
+          result = await PersonCreateHandler.handle(text, identification);
+        } else {
+          result = {
+            role: 'system',
+            success: false,
+            action: 'error',
+            message: 'Hmm I\'m not sure how to help you with that',
+            people: []
+          };
+        }
+        
+        // Step 5: Send the final result
+        const resultData = JSON.stringify({
+          type: 'result',
+          data: result
+        });
+        controller.enqueue(`data: ${resultData}\n\n`);
+        
+        // Close the stream
+        controller.close();
+        
+      } catch (error) {
+        console.error('Processing error:', error);
+        const errorData = JSON.stringify({
+          type: 'result',
+          data: {
+            role: 'system',
+            success: false,
+            action: 'error',
+            message: 'I failed to process your request',
+            people: []
+          }
+        });
+        controller.enqueue(`data: ${errorData}\n\n`);
+        controller.close();
       }
-
-      // Helper function to safely get enum value
-      function getEnumValue<T extends { [key: string]: string }>(
-        enumObj: T,
-        value: string | null
-      ): T[keyof T] | undefined {
-        if (!value) return undefined;
-        const lowerValue = value.toLowerCase();
-        return Object.values(enumObj).includes(lowerValue) ? lowerValue as T[keyof T] : undefined;
-      }
-
-      // Update the person with new data
-      const updateFields: any = {};
-      if (updateData.name) updateFields.name = updateData.name;
-      if (updateData.body) updateFields.body = updateData.body;
-      if (updateData.intent) updateFields.intent = getEnumValue(Intent, updateData.intent);
-      if (updateData.birthday) updateFields.birthday = new Date(updateData.birthday);
-      if (updateData.mnemonic) updateFields.mnemonic = updateData.mnemonic;
-
-      await personToUpdate.update(updateFields);
-      console.log('updateFields', updateFields);
-
-      return json({
-        success: true,
-        action: 'update',
-        message: `I updated ${personToUpdate.name}`,
-        person: personToUpdate
-      });
     }
-
-    // If it's a create request
-    const createPrompt = createPersonPrompt();
-
-    const createChain = RunnableSequence.from([
-      createPrompt,
-      model,
-      new StringOutputParser(),
-    ]);
-
-    const result = await createChain.invoke({ text });
-    const personData = JSON.parse(result);
-
-    // Helper function to safely get enum value
-    function getEnumValue<T extends { [key: string]: string }>(
-      enumObj: T,
-      value: string | null
-    ): T[keyof T] | undefined {
-      if (!value) return undefined;
-      const lowerValue = value.toLowerCase();
-      return Object.values(enumObj).includes(lowerValue) ? lowerValue as T[keyof T] : undefined;
-    }
-
-    // Create the person using our utility function
-    const newPerson = await createPerson({
-      name: personData.name,
-      body: personData.body,
-      intent: getEnumValue(Intent, personData.intent),
-      birthday: personData.birthday ? new Date(personData.birthday) : null,
-      mnemonic: personData.mnemonic
-    });
-
-    return json({
-      success: true,
-      action: 'create',
-      message: `I created ${newPerson.name}`,
-      person: newPerson
-    });
-  } catch (error) {
-    console.error('Processing error:', error);
-    return json({
-      success: false,
-      action: 'error',
-      message: 'I failed to process your request',
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
-    }, { status: 500 });
-  }
-} 
+  });
+  
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+    },
+  });
+}
