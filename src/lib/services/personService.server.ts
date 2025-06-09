@@ -8,7 +8,7 @@ export interface PersonWithGroups extends Person {
 }
 
 export interface PersonWithAssociates extends Person {
-  AssociatedPeople?: Person[];
+  Associates?: Person[];
 }
 
 export interface PersonWithMethods extends Person {
@@ -172,7 +172,7 @@ export class PersonService {
       const associates = await Person.findAll({
         include: [{
           model: Person,
-          as: 'AssociatedPeople',
+          as: 'Associates',
           through: { attributes: [] }
         }],
         where: { id }
@@ -192,7 +192,7 @@ export class PersonService {
 
       return {
         friend: friend.toJSON(),
-        associates: associates[0]?.AssociatedPeople?.map(a => a.toJSON()) || [],
+        associates: associates[0]?.Associates?.map(a => a.toJSON()) || [],
         journals: journals.map(j => j.toJSON()),
         groupData
       };

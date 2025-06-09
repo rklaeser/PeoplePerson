@@ -39,7 +39,19 @@ export const load: PageServerLoad = async ({ params }) => {
       group_name: group.name
     }));
 
-    return { group: { id: group.id, name: group.name }, people: friends };
+    // Get all people for autocomplete (excluding current group members)
+    const allPeople = await Person.findAll({
+      attributes: ['id', 'name']
+    });
+    
+    const currentMemberIds = new Set(friends.map(f => f.id));
+    const availablePeople = allPeople.filter(person => !currentMemberIds.has(person.id));
+
+    return { 
+      group: { id: group.id, name: group.name, description: group.description }, 
+      people: friends,
+      availablePeople: availablePeople.map(p => ({ id: p.id, name: p.name }))
+    };
   } catch (error) {
     console.error('Sequelize group page error:', error);
     return fail(500, { error: 'Failed to fetch group or people' });
@@ -70,4 +82,60 @@ export const actions = {
           return fail(500, { error: 'Failed to add person' });
     }
     },
+
+    removeMember: async ({ request }) => {
+      const data = await request.formData();
+      const personId = data.get('personId') as string;
+      const groupId = data.get('groupId') as string;
+      
+      console.log('🚀 Removing person from group:', { personId, groupId });
+
+      try {
+        // Find the person and group
+        const person = await Person.findByPk(personId);
+        const group = await Group.findByPk(groupId);
+
+        if (!person || !group) {
+          return fail(404, { error: 'Person or group not found' });
+        }
+
+        // Remove the association between person and group
+        await person.removeGroup(group);
+        
+        console.log('🚀 Person removed from group successfully');
+        return { success: true };
+
+      } catch (error) {
+        console.error('Remove member error:', error);
+        return fail(500, { error: 'Failed to remove member from group' });
+      }
+    },
+
+    addMember: async ({ request }) => {
+      const data = await request.formData();
+      const personId = data.get('personId') as string;
+      const groupId = data.get('groupId') as string;
+      
+      console.log('🚀 Adding person to group:', { personId, groupId });
+
+      try {
+        // Find the person and group
+        const person = await Person.findByPk(personId);
+        const group = await Group.findByPk(groupId);
+
+        if (!person || !group) {
+          return fail(404, { error: 'Person or group not found' });
+        }
+
+        // Add the association between person and group
+        await person.addGroup(group);
+        
+        console.log('🚀 Person added to group successfully');
+        return { success: true };
+
+      } catch (error) {
+        console.error('Add member error:', error);
+        return fail(500, { error: 'Failed to add member to group' });
+      }
+    }
 }

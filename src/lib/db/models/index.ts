@@ -14,14 +14,14 @@ Group.belongsToMany(Person, { through: GroupAssociation, foreignKey: 'groupId' }
 // Set up Person-to-Person association for associates
 Person.belongsToMany(Person, { 
   through: 'PersonAssociations',
-  as: 'AssociatedPeople',
+  as: 'Associates',
   foreignKey: 'personId',
   otherKey: 'associateId'
 });
 
 Person.belongsToMany(Person, {
   through: 'PersonAssociations',
-  as: 'PrimaryPeople',
+  as: 'AssociatedWith',
   foreignKey: 'associateId',
   otherKey: 'personId'
 });

@@ -1,6 +1,7 @@
 <script lang="ts">
   import FriendListModal from '$lib/components/FriendListModal.svelte';
   import CreateFriendModal from '$lib/components/CreateFriendModal.svelte';
+  import GroupListModal from '$lib/components/GroupListModal.svelte';
   import { goto } from '$app/navigation';
   import arc from '$lib/images/arc.png';
   import { onMount } from 'svelte';
@@ -16,6 +17,7 @@
   let chatHistory: ChatMessage[] = [];
   
   let isModalOpen = false;
+  let isGroupsModalOpen = false;
   let showChat = false;
   let isCreateModalOpen = false;
 
@@ -112,50 +114,30 @@
       isProcessing = true;
       
       try {
-        const response = await fetch('/api/person', {
+        const response = await fetch('/api/create', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ 
-            text: `create new friend ${button.personData.name}`,
-            forceCreate: true,
-            personData: button.personData
-          })
+          body: JSON.stringify(button.personData)
         });
 
         if (!response.ok) {
           throw new Error('Failed to create new friend');
         }
 
-        const reader = response.body?.getReader();
-        const decoder = new TextDecoder();
+        const result = await response.json();
         
-        if (!reader) {
-          throw new Error('No response stream available');
-        }
-
-        while (true) {
-          const { done, value } = await reader.read();
-          
-          if (done) break;
-          
-          const chunk = decoder.decode(value);
-          const lines = chunk.split('\n');
-          
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              try {
-                const eventData = JSON.parse(line.slice(6));
-                
-                if (eventData.type === 'result') {
-                  chatHistory = [...chatHistory, eventData.data];
-                }
-              } catch (e) {
-                console.error('Error parsing SSE data:', e);
-              }
-            }
-          }
+        if (result.success) {
+          chatHistory = [...chatHistory, {
+            role: 'system',
+            success: true,
+            action: 'create',
+            message: `Successfully created ${result.person.name} as a new friend!`,
+            people: [result.person]
+          }];
+        } else {
+          throw new Error(result.error || 'Failed to create new friend');
         }
         
       } catch (e) {
@@ -232,6 +214,12 @@
           class="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
         >
           Browse Friends
+        </button>
+        <button
+          on:click={() => isGroupsModalOpen = true}
+          class="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
+        >
+          Browse Groups
         </button>
         <button
           on:click={() => isCreateModalOpen = true}
@@ -466,3 +454,4 @@
 <!-- USE TWO-WAY BINDING HERE -->
 <FriendListModal bind:isOpen={isModalOpen} />
 <CreateFriendModal bind:isOpen={isCreateModalOpen} />
+<GroupListModal bind:isOpen={isGroupsModalOpen} />

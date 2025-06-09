@@ -16,6 +16,7 @@ export interface Friend {
 export interface Group {
     id: string;
     name: string;
+    People?: Friend[];
 }
 
 export interface Journal {

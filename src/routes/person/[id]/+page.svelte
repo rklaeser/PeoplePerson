@@ -18,11 +18,8 @@
                      journals: Journal[],
                     groupData: Group[] };
 
-  let isEditing = false;
-
-  function toggleEdit() {
-    isEditing = !isEditing;
-  }
+  let groupsComponent: any;
+  let associatesComponent: any;
 
   function goBackWithModal() {
     goto('/?modal=open');
@@ -40,24 +37,42 @@
     <i class="fas fa-arrow-left"></i>
   </button>
   <div class="relative">
-    <Name {data} {isEditing}/>
+    <Name {data}/>
     <div class ="flex flex-col gap-4"> 
-      <h1>Attributes</h1>
-      <Status {data} {isEditing}/>
-      <Birthday {data} {isEditing}/>
-      <Mnemonic {data} {isEditing}/>
+      <Status {data}/>
+      <Birthday {data}/>
+      <Mnemonic {data}/>
     </div>
     <div class="flex flex-col gap-2 mt-2">
-      <h1>Associations</h1>
-      <Groups {data} {isEditing}/>
-      <Associates {data} {isEditing}/>
+      <div class="flex items-center justify-between">
+        <h1>Groups</h1>
+        <button 
+          on:click={() => groupsComponent?.startAdding()} 
+          class="bg-blue-500 hover:bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm transition-colors"
+          title="Add Group"
+        >
+          +
+        </button>
+      </div>
+      <Groups {data} bind:this={groupsComponent}/>
     </div>
-    {#if isEditing}
-      <button on:click={toggleEdit} class="absolute top-[140px] right-0 bg-blue-500 text-white px-6 py-3 text-lg rounded">Save</button>
-    {:else}
-    <button on:click={toggleEdit} class="absolute top-[140px] right-0 text-gray-500 px-6 py-3 text-lg" aria-label="Edit"><i class="fas fa-pencil-alt"></i></button>
-    {/if}
+    <div class="flex flex-col gap-2 mt-2">
+      <div class="flex items-center justify-between">
+        <h1>Associates</h1>
+        <button 
+          on:click={() => associatesComponent?.startAdding()} 
+          class="bg-blue-500 hover:bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm transition-colors"
+          title="Add Associate"
+        >
+          +
+        </button>
+      </div>
+      <Associates {data} bind:this={associatesComponent}/>
+    </div>
     <Body {data}/>
+    <div class="flex flex-col gap-2 mt-2">
+      <h1>History</h1>
+    </div>
     <JournalEntries {data}/>
   </div>
 </section>

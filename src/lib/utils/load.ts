@@ -16,7 +16,7 @@ export async function getPeopleNotAssociates() {
             },
             {
                 model: Person,
-                as: 'AssociatedPeople',
+                as: 'Associates',
                 through: { attributes: [] }
             }
         ]
@@ -34,6 +34,13 @@ export async function getArchivedPeople() {
 }
 
 export async function getGroups() {
-    const groups = await Group.findAll();
+    const groups = await Group.findAll({
+        include: [
+            {
+                model: Person,
+                through: { attributes: [] }
+            }
+        ]
+    });
     return groups;
 }   

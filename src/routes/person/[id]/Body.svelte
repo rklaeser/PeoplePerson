@@ -81,6 +81,7 @@
     <textarea id="markdown-editor" class="w-full h-72"></textarea>
   {:else} 
     <button on:click={toggleEdit} class="absolute top-[-15px] right-0 text-gray-500 px-6 py-3 text-lg" aria-label="Edit"><i class="fas fa-pencil-alt"></i></button>
+    <h1>My Summary</h1>
     <div>{@html snarkdown(data.friend.body)}</div>
   {/if}
 </div>
