@@ -6,6 +6,7 @@ import { Group } from './Group';
 export class GroupAssociation extends Model {
   declare groupId: string;
   declare personId: string;
+  declare userId: string;
   declare createdAt: Date;
   declare updatedAt: Date;
 }
@@ -27,6 +28,10 @@ GroupAssociation.init(
         model: Person,
         key: 'id'
       }
+    },
+    userId: {
+      type: DataTypes.UUID,
+      allowNull: false
     }
   },
   {

@@ -4,8 +4,10 @@
     import { slide, fade } from 'svelte/transition';
     import { groups } from '$lib/stores/friends';
     import { goto } from '$app/navigation';
+    import { isDemoMode, demoGroups, demoGroupAssociations, demoPeople } from '$lib/stores/demoStore';
   
     export let isOpen = false;
+    export let data: any = null; // Demo data passed from parent
   
     function closeModal() {
       isOpen = false;
@@ -19,8 +21,23 @@
     }
 
     function navigateToGroup(id: string) {
-      goto(`/group/${id}`);
+      if ($isDemoMode || data?.isDemo) {
+        goto(`/demo/group/${id}`);
+      } else {
+        goto(`/group/${id}`);
+      }
     }
+
+    // Get groups with member counts for demo mode
+    $: displayGroups = ($isDemoMode || data?.isDemo) 
+      ? $demoGroups.map(group => {
+          const memberCount = $demoGroupAssociations.filter(assoc => assoc.groupId === group.id).length;
+          return {
+            ...group,
+            People: { length: memberCount }
+          };
+        })
+      : $groups;
   </script>
   
   <svelte:window on:keydown={handleKeydown} />
@@ -47,7 +64,7 @@
         </div>
         <div class="overflow-auto" style="height: calc(80vh - 4rem);">
           <div class="divide-y divide-gray-700">
-            {#each $groups as group}
+            {#each displayGroups as group}
               <div 
                 class="flex gap-x-4 px-4 py-3 hover:bg-gray-800 cursor-pointer items-center"
                 on:click={() => navigateToGroup(group.id)}

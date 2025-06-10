@@ -5,6 +5,7 @@ export class Group extends Model {
   declare id: string;
   declare name: string;
   declare description: string;
+  declare userId: string;
   declare createdAt: Date;
   declare updatedAt: Date;
 }
@@ -23,6 +24,10 @@ Group.init(
   description: {
     type: DataTypes.TEXT,
     allowNull: true
+  },
+  userId: {
+    type: DataTypes.UUID,
+    allowNull: false
   }
 },
   {

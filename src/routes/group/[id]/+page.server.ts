@@ -1,24 +1,42 @@
 import type { PageServerLoad } from './$types';
 import { Group, Person } from '$lib/db/models';
 import type { Friend } from '$lib/types';
-import { fail } from '@sveltejs/kit';
+import { fail, redirect } from '@sveltejs/kit';
 
 
-export const load: PageServerLoad = async ({ params }) => {
+export const load: PageServerLoad = async ({ params, locals }) => {
+  // Check for demo session first
+  let session = locals.session;
+  
+  // Check for Auth.js session if no demo session and auth is available
+  if (!session && locals.auth) {
+    try {
+      session = await locals.auth();
+    } catch (e) {
+      // Auth.js not available, continue with no session
+    }
+  }
+  
+  // Redirect to signin if not authenticated
+  if (!session?.user?.id) {
+    throw redirect(303, '/auth/signin');
+  }
+  
   const id = params.id;
   try {
-    // Fetch the group by ID
-    const group = await Group.findByPk(id);
+    // Fetch the group by ID and ensure ownership
+    const group = await Group.findOne({ where: { id, userId: session.user.id } });
     if (!group) {
-      throw new Error('Group not found');
+      throw new Error('Group not found or access denied');
     }
 
-    // Fetch people in the group (with all Friend fields)
+    // Fetch people in the group (with all Friend fields) - only user's data
     const people = await Person.findAll({
+      where: { userId: session.user.id },
       include: [
         {
           model: Group,
-          where: { id },
+          where: { id, userId: session.user.id },
           through: { attributes: [] },
           attributes: []
         }
@@ -39,8 +57,9 @@ export const load: PageServerLoad = async ({ params }) => {
       group_name: group.name
     }));
 
-    // Get all people for autocomplete (excluding current group members)
+    // Get all people for autocomplete (excluding current group members) - only user's data
     const allPeople = await Person.findAll({
+      where: { userId: session.user.id },
       attributes: ['id', 'name']
     });
     
@@ -59,7 +78,23 @@ export const load: PageServerLoad = async ({ params }) => {
 };
 
 export const actions = {
-    create: async ({ request }) => {
+    create: async ({ request, locals }) => {
+      // Check for demo session first
+      let session = locals.session;
+      
+      // Check for Auth.js session if no demo session and auth is available
+      if (!session && locals.auth) {
+        try {
+          session = await locals.auth();
+        } catch (e) {
+          // Auth.js not available, continue with no session
+        }
+      }
+      
+      if (!session?.user?.id) {
+        return fail(401, { error: 'Unauthorized' });
+      }
+
       const data = await request.formData();
       const name = data.get('name') as string;
       const group_id = data.get('groupId') as string;
@@ -67,7 +102,8 @@ export const actions = {
         try {
             const newFriend = await Person.create({
             name: name,
-            intent: 'new'
+            intent: 'new',
+            userId: session.user.id
           });
           console.log('🚀 Person added:', name);
 
@@ -83,7 +119,23 @@ export const actions = {
     }
     },
 
-    removeMember: async ({ request }) => {
+    removeMember: async ({ request, locals }) => {
+      // Check for demo session first
+      let session = locals.session;
+      
+      // Check for Auth.js session if no demo session and auth is available
+      if (!session && locals.auth) {
+        try {
+          session = await locals.auth();
+        } catch (e) {
+          // Auth.js not available, continue with no session
+        }
+      }
+      
+      if (!session?.user?.id) {
+        return fail(401, { error: 'Unauthorized' });
+      }
+
       const data = await request.formData();
       const personId = data.get('personId') as string;
       const groupId = data.get('groupId') as string;
@@ -91,12 +143,12 @@ export const actions = {
       console.log('🚀 Removing person from group:', { personId, groupId });
 
       try {
-        // Find the person and group
-        const person = await Person.findByPk(personId);
-        const group = await Group.findByPk(groupId);
+        // Find the person and group with ownership check
+        const person = await Person.findOne({ where: { id: personId, userId: session.user.id } });
+        const group = await Group.findOne({ where: { id: groupId, userId: session.user.id } });
 
         if (!person || !group) {
-          return fail(404, { error: 'Person or group not found' });
+          return fail(404, { error: 'Person or group not found or access denied' });
         }
 
         // Remove the association between person and group
@@ -111,7 +163,23 @@ export const actions = {
       }
     },
 
-    addMember: async ({ request }) => {
+    addMember: async ({ request, locals }) => {
+      // Check for demo session first
+      let session = locals.session;
+      
+      // Check for Auth.js session if no demo session and auth is available
+      if (!session && locals.auth) {
+        try {
+          session = await locals.auth();
+        } catch (e) {
+          // Auth.js not available, continue with no session
+        }
+      }
+      
+      if (!session?.user?.id) {
+        return fail(401, { error: 'Unauthorized' });
+      }
+
       const data = await request.formData();
       const personId = data.get('personId') as string;
       const groupId = data.get('groupId') as string;
@@ -119,12 +187,12 @@ export const actions = {
       console.log('🚀 Adding person to group:', { personId, groupId });
 
       try {
-        // Find the person and group
-        const person = await Person.findByPk(personId);
-        const group = await Group.findByPk(groupId);
+        // Find the person and group with ownership check
+        const person = await Person.findOne({ where: { id: personId, userId: session.user.id } });
+        const group = await Group.findOne({ where: { id: groupId, userId: session.user.id } });
 
         if (!person || !group) {
-          return fail(404, { error: 'Person or group not found' });
+          return fail(404, { error: 'Person or group not found or access denied' });
         }
 
         // Add the association between person and group

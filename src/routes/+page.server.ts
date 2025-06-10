@@ -1,13 +1,28 @@
-import { Person, Group, Journal } from '$lib/db/models';
-import { fail } from '@sveltejs/kit';
+import { Person, Group, History } from '$lib/db/models';
+import { fail, redirect } from '@sveltejs/kit';
 import { json } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { getPeopleNotAssociates, getGroups } from '$lib/utils/load';
 
-export const load: PageServerLoad = async () => {
+export const load: PageServerLoad = async (event) => {
+	// Check for Auth.js session
+	let session = null;
+	if (event.locals.auth) {
+		try {
+			session = await event.locals.auth();
+		} catch (e) {
+			// Auth.js not available, continue with no session
+		}
+	}
+	
+	// Redirect to signin if not authenticated
+	if (!session?.user?.id) {
+		throw redirect(303, '/auth/signin');
+	}
+	
 	try {
-		const people = await getPeopleNotAssociates();
-		const groups = await getGroups();
+		const people = await getPeopleNotAssociates(session.user.id);
+		const groups = await getGroups(session.user.id);
 
 		return {
 			people: people.map(person => person.toJSON()),
@@ -23,13 +38,28 @@ export const load: PageServerLoad = async () => {
 };
 
 export const actions = {
-	create: async ({ request }) => {
+	create: async ({ request, locals }) => {
+		// Check for Auth.js session
+		let session = null;
+		if (locals.auth) {
+			try {
+				session = await locals.auth();
+			} catch (e) {
+				// Auth.js not available
+			}
+		}
+		
+		if (!session?.user?.id) {
+			return fail(401, { error: 'Unauthorized' });
+		}
+		
 		const data = await request.formData();
 		const name = data.get('name') as string;
 		try {
 			const newPerson = await Person.create({
 				name: name,
-				intent: 'new'
+				intent: 'new',
+				userId: session.user.id
 			});
 			console.log('🚀 Person added:', name);
 			return { id: newPerson.id };
@@ -38,16 +68,30 @@ export const actions = {
 			return fail(500, { error: 'Failed to add person' });
 		}
 	},
-	delete: async ({ request }) => {
+	delete: async ({ request, locals }) => {
+		// Check for Auth.js session
+		let session = null;
+		if (locals.auth) {
+			try {
+				session = await locals.auth();
+			} catch (e) {
+				// Auth.js not available
+			}
+		}
+		
+		if (!session?.user?.id) {
+			return fail(401, { error: 'Unauthorized' });
+		}
+
 		const data = await request.formData();
 		const id = data.get('id') as string;
 		const name = data.get('name') as string;
 		try {
-			// Delete associated records first
-			await Journal.destroy({ where: { person_id: id } });
+			// Delete associated records first (with userId filter)
+			await History.destroy({ where: { personId: id, userId: session.user.id } });
 			
-			// Delete the person (this will cascade delete associations)
-			await Person.destroy({ where: { id } });
+			// Delete the person (ensure ownership)
+			await Person.destroy({ where: { id, userId: session.user.id } });
 			
 			console.log('🚀 Person deleted:', name);
 		} catch (error) {

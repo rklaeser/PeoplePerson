@@ -1,13 +1,21 @@
 // src/routes/api/person/+server.ts
-import { json } from '@sveltejs/kit';
+import { json, error } from '@sveltejs/kit';
 import { detectIntent, identifyPerson } from '$lib/langchain/utils';
 import { PersonService } from '$lib/services/personService.server';
 import { PersonSearchHandler } from '$lib/handlers/personSearchHandler';
 import { PersonUpdateHandler } from '$lib/handlers/personUpdateHandler';
 import { PersonCreateHandler } from '$lib/handlers/personCreateHandler';
 import type { ChatMessage } from '$lib/types';
+import type { RequestHandler } from './$types';
 
-export async function POST({ request }) {
+export const POST: RequestHandler = async ({ request, locals }) => {
+  const session = await locals.auth();
+  
+  // Return 401 if not authenticated
+  if (!session) {
+    throw error(401, 'Unauthorized');
+  }
+  
   const { text } = await request.json();
   
   // Create a readable stream for SSE
@@ -74,7 +82,7 @@ export async function POST({ request }) {
         }
 
         // Step 2: Get all friends for person identification
-        const allFriends = await PersonService.getAllFriends();
+        const allFriends = await PersonService.getAllFriends(session.user?.id || '');
 
         // Step 3: Identify people based on the detected intent
         const identification = await identifyPerson(text, action, allFriends);
@@ -102,7 +110,7 @@ export async function POST({ request }) {
         if (finalAction === 'clarify') {
           // Check if the original intent was 'create' - if so, let PersonCreateHandler handle it
           if (originalIntent === 'create') {
-            result = await PersonCreateHandler.handle(text, identification);
+            result = await PersonCreateHandler.handle(text, identification, session.user?.id || '');
           } else {
             // Handle clarification case for other intents - show multiple matches and ask user to specify
             const matchedFriends = allFriends.filter(friend => 
@@ -118,11 +126,11 @@ export async function POST({ request }) {
             };
           }
         } else if (finalAction === 'search') {
-          result = await PersonSearchHandler.handle(text, identification);
+          result = await PersonSearchHandler.handle(text, identification, session.user?.id || '');
         } else if (finalAction === 'update') {
-          result = await PersonUpdateHandler.handle(text, identification);
+          result = await PersonUpdateHandler.handle(text, identification, session.user?.id || '');
         } else if (finalAction === 'create') {
-          result = await PersonCreateHandler.handle(text, identification);
+          result = await PersonCreateHandler.handle(text, identification, session.user?.id || '');
         } else {
           result = {
             role: 'system',

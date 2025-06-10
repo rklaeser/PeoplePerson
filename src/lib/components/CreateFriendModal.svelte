@@ -1,6 +1,7 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import { reload } from '$lib/stores/friends';
+    import { isDemoMode, demoActions } from '$lib/stores/demoStore';
   
   
     let name = '';
@@ -12,6 +13,7 @@
     let error = '';
   
     export let isOpen = false;
+    export let data: any = null; // Demo data passed from parent
   
     function closeModal() {
       isOpen = false;
@@ -24,27 +26,45 @@
       }
       isSaving = true;
       error = '';
+      
       try {
-        const response = await fetch('/api/create', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name,
-            body,
-            intent,
-            birthday,
-            mnemonic
-          })
-        });
-        const result = await response.json();
-        if (!response.ok) {
-          error = result.error || 'Failed to create friend';
-          isSaving = false;
-          return;
+        if ($isDemoMode || data?.isDemo) {
+          // Demo mode: use store actions
+          const newPerson = demoActions.createPerson(name, intent);
+          if (body) demoActions.updatePerson(newPerson.id, { body });
+          if (birthday) demoActions.updatePerson(newPerson.id, { birthday });
+          if (mnemonic) demoActions.updatePerson(newPerson.id, { mnemonic });
+          
+          // Reset form
+          name = '';
+          body = '';
+          intent = 'new';
+          birthday = null;
+          mnemonic = '';
+          closeModal();
+        } else {
+          // Regular mode: API call
+          const response = await fetch('/api/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name,
+              body,
+              intent,
+              birthday,
+              mnemonic
+            })
+          });
+          const result = await response.json();
+          if (!response.ok) {
+            error = result.error || 'Failed to create friend';
+            isSaving = false;
+            return;
+          }
+          // Reload the friends data
+          await reload();
+          closeModal();
         }
-        // Reload the friends data
-        await reload();
-        closeModal();
       } catch (e) {
         error = 'Failed to create friend';
       } finally {

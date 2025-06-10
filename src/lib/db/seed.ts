@@ -1,4 +1,4 @@
-import { Person, Group, sequelize } from './models';
+import { Person, Group, PersonAssociation, GroupAssociation, User, sequelize } from './models';
 import { Intent } from './models/Person';
 
 async function seed() {
@@ -7,14 +7,26 @@ async function seed() {
     await sequelize.sync({ force: true });
     console.log('Database cleared and tables recreated');
 
+    // Create demo user for Dwight Schrute demo with explicit UUID
+    const demoUserId = '00000000-0000-0000-0000-000000000001';
+    const demoUser = await User.create({
+      id: demoUserId,
+      name: 'Dwight Schrute Demo',
+      email: 'demo@friendshipapp.com',
+      image: 'https://example.com/dwight.jpg'
+    });
+    console.log('Demo user created with ID:', demoUser.id);
+
     // Create Work group
     const workGroup = await Group.create({
-      name: 'Work'
+      name: 'Work',
+      userId: demoUser.id
     });
 
     // Create Beet Club group
     const beetClubGroup = await Group.create({
-      name: 'Beet Club'
+      name: 'Beet Club',
+      userId: demoUser.id
     });
 
     // Create Work group members
@@ -22,21 +34,24 @@ async function seed() {
       name: 'Michael Scott',
       body: 'World\'s Best Boss. My hero.',
       intent: Intent.CORE,
-      profile_pic_index: 0
+      profile_pic_index: 0,
+      userId: demoUser.id
     });
 
     const pam = await Person.create({
       name: 'Pam Beesly',
       body: 'Office Administrator',
       intent: Intent.INVEST,
-      profile_pic_index: 1
+      profile_pic_index: 1,
+      userId: demoUser.id
     });
 
     const creed = await Person.create({
       name: 'Creed Bratton',
       body: 'Quality Assurance, even I think he\'s creepy.',
       intent: Intent.NEW,
-      profile_pic_index: 2
+      profile_pic_index: 2,
+      userId: demoUser.id
     });
 
     // Create Beet Club members
@@ -44,21 +59,24 @@ async function seed() {
       name: 'Rolf Ahl',
       body: 'Legendary Beeter',
       intent: Intent.CORE,
-      profile_pic_index: 3
+      profile_pic_index: 3,
+      userId: demoUser.id
     });
 
     const mose = await Person.create({
       name: 'Mose',
       body: 'Legendary Beeter',
       intent: Intent.CORE,
-      profile_pic_index: 4
+      profile_pic_index: 4,
+      userId: demoUser.id
     });
 
     const angela = await Person.create({
       name: 'Angela Martin',
       body: 'Office Administrator',
       intent: Intent.ROMANTIC,
-      profile_pic_index: 5
+      profile_pic_index: 5,
+      userId: demoUser.id
     });
 
     // Create additional people
@@ -66,55 +84,60 @@ async function seed() {
       name: 'Jan Levinson',
       body: 'Former Dunder Mifflin VP',
       intent: Intent.CORE,
-      profile_pic_index: 6
+      profile_pic_index: 6,
+      userId: demoUser.id
     });
 
     const hunter = await Person.create({
       name: 'Hunter',
       body: 'Jan\'s former assistant',
       intent: Intent.ASSOCIATE,
-      profile_pic_index: 7
+      profile_pic_index: 7,
+      userId: demoUser.id
     });
 
     const edTruck = await Person.create({
       name: 'Ed Truck',
       body: 'Former Regional Manager, epic death',
       intent: Intent.ARCHIVE,
-      profile_pic_index: 7
+      profile_pic_index: 7,
+      userId: demoUser.id
     });
 
     const david = await Person.create({
         name: 'David Wallace',
         body: 'Left the company.',
         intent: Intent.ARCHIVE,
-        profile_pic_index: 8
+        profile_pic_index: 8,
+        userId: demoUser.id
       });
 
     const jim = await Person.create({
       name: 'Jim Halpert',
       body: 'Sales Representative, kinda mean to me sometimes.',
       intent: Intent.INVEST,
-      profile_pic_index: 9
+      profile_pic_index: 9,
+      userId: demoUser.id
     });
 
     // Associate Work group members
-    await (michael as any).addGroup(workGroup);
-    await (pam as any).addGroup(workGroup);
-    await (creed as any).addGroup(workGroup);
-    await (jim as any).addGroup(workGroup);
-    await (edTruck as any).addGroup(workGroup);
-    await (david as any).addGroup(workGroup);
-    await (angela as any).addGroup(workGroup);
-    await (jan as any).addGroup(workGroup);
+    await GroupAssociation.create({ personId: michael.id, groupId: workGroup.id, userId: demoUser.id });
+    await GroupAssociation.create({ personId: pam.id, groupId: workGroup.id, userId: demoUser.id });
+    await GroupAssociation.create({ personId: creed.id, groupId: workGroup.id, userId: demoUser.id });
+    await GroupAssociation.create({ personId: jim.id, groupId: workGroup.id, userId: demoUser.id });
+    await GroupAssociation.create({ personId: edTruck.id, groupId: workGroup.id, userId: demoUser.id });
+    await GroupAssociation.create({ personId: david.id, groupId: workGroup.id, userId: demoUser.id });
+    await GroupAssociation.create({ personId: angela.id, groupId: workGroup.id, userId: demoUser.id });
+    await GroupAssociation.create({ personId: jan.id, groupId: workGroup.id, userId: demoUser.id });
 
-    // Associate Run Club members
-    await (rolf as any).addGroup(beetClubGroup);
-    await (mose as any).addGroup(beetClubGroup);
+    // Associate Beet Club members
+    await GroupAssociation.create({ personId: rolf.id, groupId: beetClubGroup.id, userId: demoUser.id });
+    await GroupAssociation.create({ personId: mose.id, groupId: beetClubGroup.id, userId: demoUser.id });
 
-    // Create associations
-    await (jan as any).addAssociatedPeople(hunter);
+    // Create person associations
+    await PersonAssociation.create({ personId: jan.id, associateId: hunter.id, userId: demoUser.id });
 
-    console.log('Database seeded successfully with Work and Run Club groups');
+    console.log('Database seeded successfully with Work and Beet Club groups');
   } catch (error) {
     console.error('Error seeding database:', error);
     process.exit(1);

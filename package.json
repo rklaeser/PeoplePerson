@@ -44,9 +44,12 @@
 	},
 	"type": "module",
 	"dependencies": {
+		"@auth/pg-adapter": "^1.9.1",
+		"@auth/sveltekit": "^1.9.2",
 		"@fortawesome/fontawesome-free": "^6.7.1",
 		"@langchain/anthropic": "^0.3.21",
 		"@langchain/openai": "^0.5.11",
+		"arctic": "^3.7.0",
 		"carta-md": "^4.6.7",
 		"daisyui": "^5.0.43",
 		"debounce": "^2.2.0",

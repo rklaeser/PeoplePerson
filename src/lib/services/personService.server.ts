@@ -1,5 +1,6 @@
 // File: src/lib/services/personService.server.ts
-import { Person, Group, Journal } from '$lib/db/models';
+import { Person, Group, History } from '$lib/db/models';
+import { ChangeType } from '$lib/db/models';
 import { Intent } from '$lib/db/models/Person';
 import type { Friend } from '$lib/types';
 
@@ -21,7 +22,7 @@ export interface PersonWithMethods extends Person {
 export interface PersonData {
   friend: any;
   associates: any[];
-  journals: any[];
+  history: any[];
   groupData: Array<{ groupId: string; groupName: string }>;
 }
 
@@ -31,6 +32,7 @@ export interface CreatePersonInput {
   intent?: Intent | null;
   birthday?: string | null; // YYYY-MM-DD format
   mnemonic?: string | null;
+  userId?: string | null;
 }
 
 export interface UpdatePersonInput {
@@ -46,9 +48,10 @@ export class PersonService {
   /**
    * Get all friends/people - for handlers and identification
    */
-  static async getAllFriends(): Promise<Friend[]> {
+  static async getAllFriends(userId: string): Promise<Friend[]> {
     try {
       const people = await Person.findAll({
+        where: { userId },
         order: [['name', 'ASC']]
       });
       return people.map(person => person.toJSON() as Friend);
@@ -90,7 +93,8 @@ export class PersonService {
         body: input.body || 'Add a description',
         intent: input.intent || Intent.NEW,
         birthday: birthday,
-        mnemonic: input.mnemonic || null
+        mnemonic: input.mnemonic || null,
+        userId: input.userId || null
       });
 
       console.log('🚀 Friend created:', input.name);
@@ -154,10 +158,11 @@ export class PersonService {
   /**
    * Fetch a person with all their related data (groups, associates, journals)
    */
-  static async getPersonWithDetails(id: string): Promise<PersonData | null> {
+  static async getPersonWithDetails(id: string, userId: string): Promise<PersonData | null> {
     try {
-      // Fetch the person with their groups
-      const friend = await Person.findByPk(id, {
+      // Fetch the person with their groups, ensuring they belong to the user
+      const friend = await Person.findOne({
+        where: { id, userId },
         include: [{
           model: Group,
           through: { attributes: [] }
@@ -175,12 +180,12 @@ export class PersonService {
           as: 'Associates',
           through: { attributes: [] }
         }],
-        where: { id }
+        where: { id, userId }
       }) as PersonWithAssociates[];
 
-      // Fetch journal entries
-      const journals = await Journal.findAll({
-        where: { personId: id },
+      // Fetch history entries in reverse chronological order (newest first)
+      const history = await History.findAll({
+        where: { personId: id, userId },
         order: [['createdAt', 'DESC']]
       });
 
@@ -193,7 +198,7 @@ export class PersonService {
       return {
         friend: friend.toJSON(),
         associates: associates[0]?.Associates?.map(a => a.toJSON()) || [],
-        journals: journals.map(j => j.toJSON()),
+        history: history.map(h => h.toJSON()),
         groupData
       };
     } catch (error) {
@@ -205,12 +210,27 @@ export class PersonService {
   /**
    * Update person body/content
    */
-  static async updatePersonBody(id: string, content: string): Promise<void> {
+  static async updatePersonBody(id: string, content: string, userId: string): Promise<void> {
     try {
+      // Get current person to compare values and ensure ownership
+      const person = await Person.findOne({ where: { id, userId } });
+      if (!person) {
+        throw new Error('Person not found or access denied');
+      }
+
+      const oldBody = person.body || '';
+      const newBody = content || '';
+
       await Person.update(
         { body: content },
-        { where: { id } }
+        { where: { id, userId } }
       );
+
+      // Create history entry if the value actually changed
+      if (oldBody !== newBody) {
+        await PersonService.createHistoryEntry(id, ChangeType.MANUAL, 'description', `Updated description`, userId);
+      }
+
       console.log('🚀 Content updated');
     } catch (error) {
       console.error('Error updating person body:', error);
@@ -221,12 +241,27 @@ export class PersonService {
   /**
    * Update person birthday
    */
-  static async updatePersonBirthday(id: string, birthday: string): Promise<void> {
+  static async updatePersonBirthday(id: string, birthday: string, userId: string): Promise<void> {
     try {
+      // Get current person to compare values and ensure ownership
+      const person = await Person.findOne({ where: { id, userId } });
+      if (!person) {
+        throw new Error('Person not found or access denied');
+      }
+
+      const oldBirthday = person.birthday ? new Date(person.birthday).toLocaleDateString() : 'none';
+      const newBirthday = birthday ? new Date(birthday).toLocaleDateString() : 'none';
+
       await Person.update(
         { birthday },
-        { where: { id } }
+        { where: { id, userId } }
       );
+
+      // Create history entry if the value actually changed
+      if (oldBirthday !== newBirthday) {
+        await PersonService.createHistoryEntry(id, ChangeType.MANUAL, 'birthday', `${oldBirthday} to ${newBirthday}`, userId);
+      }
+
       console.log('🚀 Birthday updated');
     } catch (error) {
       console.error('Error updating person birthday:', error);
@@ -237,12 +272,27 @@ export class PersonService {
   /**
    * Update person mnemonic
    */
-  static async updatePersonMnemonic(id: string, mnemonic: string): Promise<void> {
+  static async updatePersonMnemonic(id: string, mnemonic: string, userId: string): Promise<void> {
     try {
+      // Get current person to compare values and ensure ownership
+      const person = await Person.findOne({ where: { id, userId } });
+      if (!person) {
+        throw new Error('Person not found or access denied');
+      }
+
+      const oldMnemonic = person.mnemonic || 'none';
+      const newMnemonic = mnemonic || 'none';
+
       await Person.update(
         { mnemonic },
-        { where: { id } }
+        { where: { id, userId } }
       );
+
+      // Create history entry if the value actually changed
+      if (oldMnemonic !== newMnemonic) {
+        await PersonService.createHistoryEntry(id, ChangeType.MANUAL, 'mnemonic', `"${oldMnemonic}" to "${newMnemonic}"`, userId);
+      }
+
       console.log('🚀 Mnemonic updated');
     } catch (error) {
       console.error('Error updating person mnemonic:', error);
@@ -253,9 +303,13 @@ export class PersonService {
   /**
    * Create a new person - Legacy method for backwards compatibility
    */
-  static async createPerson(name: string): Promise<Person> {
+  static async createPerson(name: string, userId?: string): Promise<Person> {
     try {
-      const person = await Person.create({ name });
+      const personData: any = { name };
+      if (userId) {
+        personData.userId = userId;
+      }
+      const person = await Person.create(personData);
       console.log('🚀 Person added:', name);
       return person;
     } catch (error) {
@@ -267,13 +321,19 @@ export class PersonService {
   /**
    * Delete person and related data
    */
-  static async deletePerson(id: string, name?: string): Promise<void> {
+  static async deletePerson(id: string, name?: string, userId?: string): Promise<void> {
     try {
+      // Build where condition for security
+      const whereCondition: any = { id };
+      if (userId) {
+        whereCondition.userId = userId;
+      }
+      
       // Delete associated records first
-      await Journal.destroy({ where: { person_id: id } });
+      await History.destroy({ where: { personId: id, ...(userId && { userId }) } });
       
       // Delete the person (this will cascade delete associations)
-      await Person.destroy({ where: { id } });
+      await Person.destroy({ where: whereCondition });
       
       console.log('🚀 Person deleted:', { id, name });
     } catch (error) {
@@ -285,18 +345,19 @@ export class PersonService {
   /**
    * Create association between two people
    */
-  static async createAssociation(primaryId: string, associateName: string): Promise<void> {
+  static async createAssociation(primaryId: string, associateName: string, userId: string): Promise<void> {
     try {
-      // Create the associate (friend)
+      // Create the associate (friend) with user ownership
       const associate = await Person.create({
         name: associateName,
-        intent: 'associate'
+        intent: 'associate',
+        userId: userId
       });
 
-      // Get the primary person
-      const primaryPerson = await Person.findByPk(primaryId) as PersonWithMethods;
+      // Get the primary person and ensure ownership
+      const primaryPerson = await Person.findOne({ where: { id: primaryId, userId } }) as PersonWithMethods;
       if (!primaryPerson) {
-        throw new Error('Primary person not found');
+        throw new Error('Primary person not found or access denied');
       }
 
       // Create the association
@@ -312,19 +373,19 @@ export class PersonService {
   /**
    * Delete association between two people
    */
-  static async deleteAssociation(primaryId: string, associateId: string): Promise<void> {
+  static async deleteAssociation(primaryId: string, associateId: string, userId: string): Promise<void> {
     try {
-      // Get the primary person
-      const primaryPerson = await Person.findByPk(primaryId) as PersonWithMethods;
+      // Get the primary person and ensure ownership
+      const primaryPerson = await Person.findOne({ where: { id: primaryId, userId } }) as PersonWithMethods;
       if (!primaryPerson) {
-        throw new Error('Primary person not found');
+        throw new Error('Primary person not found or access denied');
       }
 
       // Remove the association
       await primaryPerson.removeAssociate(associateId);
       
-      // Delete the associate
-      await Person.destroy({ where: { id: associateId } });
+      // Delete the associate (ensure ownership)
+      await Person.destroy({ where: { id: associateId, userId } });
       
       console.log('🚀 Association deleted:', { primaryId, associateId });
     } catch (error) {
@@ -334,18 +395,20 @@ export class PersonService {
   }
 
   /**
-   * Create journal entry for a person
+   * Create history entry for a person
    */
-  static async createJournalEntry(personId: string, content: string, title: string): Promise<void> {
+  static async createHistoryEntry(personId: string, changeType: ChangeType, field: string, detail: string, userId: string): Promise<void> {
     try {
-      await Journal.create({
-        person_id: personId,
-        content,
-        title
+      await History.create({
+        personId,
+        changeType,
+        field,
+        detail,
+        userId
       });
-      console.log('🚀 Journal entry created');
+      console.log('🚀 History entry created');
     } catch (error) {
-      console.error('Error creating journal entry:', error);
+      console.error('Error creating history entry:', error);
       throw error;
     }
   }
@@ -353,18 +416,18 @@ export class PersonService {
   /**
    * Add person to group (create group if it doesn't exist)
    */
-  static async addPersonToGroup(personId: string, groupName: string): Promise<void> {
+  static async addPersonToGroup(personId: string, groupName: string, userId: string): Promise<void> {
     try {
-      // Get group ID, add group if does not exist
-      const group = await Group.findOne({ where: { name: groupName } });
-      const person = await Person.findByPk(personId) as PersonWithMethods;
+      // Get group ID, add group if does not exist (ensure ownership)
+      const group = await Group.findOne({ where: { name: groupName, userId } });
+      const person = await Person.findOne({ where: { id: personId, userId } }) as PersonWithMethods;
       
       if (!person) {
-        throw new Error('Person not found');
+        throw new Error('Person not found or access denied');
       }
 
       if (!group) {
-        const newGroup = await Group.create({ name: groupName });
+        const newGroup = await Group.create({ name: groupName, userId });
         await person.addGroup(newGroup);
       } else {
         await person.addGroup(group);
@@ -379,11 +442,11 @@ export class PersonService {
   /**
    * Remove person from group
    */
-  static async removePersonFromGroup(personId: string, groupId: string): Promise<void> {
+  static async removePersonFromGroup(personId: string, groupId: string, userId: string): Promise<void> {
     try {
-      const person = await Person.findByPk(personId) as PersonWithMethods;
+      const person = await Person.findOne({ where: { id: personId, userId } }) as PersonWithMethods;
       if (!person) {
-        throw new Error('Person not found');
+        throw new Error('Person not found or access denied');
       }
       await person.removeGroup(groupId);
       console.log('🚀 Person removed from group:', { personId, groupId });
@@ -396,16 +459,31 @@ export class PersonService {
   /**
    * Update person status/intent
    */
-  static async updatePersonStatus(id: string, intent: string): Promise<void> {
+  static async updatePersonStatus(id: string, intent: string, userId: string): Promise<void> {
     if (!intent || !Object.values(Intent).includes(intent as Intent)) {
       throw new Error('Invalid intent value');
     }
 
     try {
+      // Get current person to compare values and ensure ownership
+      const person = await Person.findOne({ where: { id, userId } });
+      if (!person) {
+        throw new Error('Person not found or access denied');
+      }
+
+      const oldIntent = person.intent || 'none';
+      const newIntent = intent;
+
       await Person.update(
         { intent: intent as Intent },
-        { where: { id } }
+        { where: { id, userId } }
       );
+
+      // Create history entry if the value actually changed
+      if (oldIntent !== newIntent) {
+        await PersonService.createHistoryEntry(id, ChangeType.MANUAL, 'intent', `"${oldIntent}" to "${newIntent}"`, userId);
+      }
+
       console.log('🚀 Status updated');
     } catch (error) {
       console.error('Error updating person status:', error);

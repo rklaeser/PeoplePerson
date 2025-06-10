@@ -2,9 +2,10 @@ import type { ChatMessage, Friend } from '$lib/types';
 import { PersonService } from '$lib/services/personService.server';
 import { extractPersonData } from '$lib/langchain/utils';
 import { Intent } from '$lib/db/models/Person';
+import { ChangeType } from '$lib/db/models';
 
 export class PersonCreateHandler {
-  static async handle(text: string, identification?: any): Promise<ChatMessage> {
+  static async handle(text: string, identification: any = null, userId: string): Promise<ChatMessage> {
     try {
       // Extract person data from the text first
       const personData = await extractPersonData(text);
@@ -20,7 +21,7 @@ export class PersonCreateHandler {
       }
 
       // Check for existing people with the same name
-      const allFriends = await PersonService.getAllFriends();
+      const allFriends = await PersonService.getAllFriends(userId);
       const existingWithSameName = allFriends.filter(friend => 
         friend.name.toLowerCase() === personData.name.toLowerCase()
       );
@@ -75,7 +76,8 @@ export class PersonCreateHandler {
       // Create the new friend using PersonService
       const newFriend = await PersonService.createFriend({
         ...personData,
-        intent: personData.intent ? intentMap[personData.intent] || null : null
+        intent: personData.intent ? intentMap[personData.intent] || null : null,
+        userId: userId
       });
       
       if (!newFriend) {
@@ -87,6 +89,9 @@ export class PersonCreateHandler {
           people: []
         };
       }
+
+      // Create initial history entry
+      await PersonService.createHistoryEntry(newFriend.id, ChangeType.PROMPT, 'person', text, userId);
 
       return {
         role: 'system',

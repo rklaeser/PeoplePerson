@@ -1,0 +1,8 @@
+Add a card to the History of each Person page for the Created date. Use the createdAt field on the Person table for that
+
+Manual changes like adding the Birthday or changing the mnemonic or intent should also create History entries
+
+I'd like to add authentication to this project as simply as possible does Vercel offer any auth options or can I have people log in with GitHub
+oks
+
+

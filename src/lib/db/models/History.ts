@@ -2,16 +2,23 @@ import { Model, DataTypes } from 'sequelize';
 import { sequelize } from '../config';
 import { Person } from './Person';
 
-export class Journal extends Model {
+export enum ChangeType {
+  PROMPT = 'prompt',
+  MANUAL = 'manual'
+}
+
+export class History extends Model {
   declare id: string;
   declare personId: string;
-  declare title: string;
-  declare body: string;
+  declare changeType: ChangeType;
+  declare field: string;
+  declare detail: string;
+  declare userId: string;
   declare createdAt: Date;
   declare updatedAt: Date;
 }
 
-Journal.init(
+History.init(
   {
     id: {
       type: DataTypes.UUID,
@@ -26,20 +33,27 @@ Journal.init(
         key: 'id'
       }
     },
-    title: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      defaultValue: 'Untitled'
+    changeType: {
+      type: DataTypes.ENUM('prompt', 'manual'),
+      allowNull: false
     },
-    body: {
+    field: {
+      type: DataTypes.STRING,
+      allowNull: false
+    },
+    detail: {
       type: DataTypes.TEXT,
+      allowNull: false
+    },
+    userId: {
+      type: DataTypes.UUID,
       allowNull: false
     }
   },
   {
     sequelize,
-    modelName: 'Journal',
-    tableName: 'journal',
+    modelName: 'History',
+    tableName: 'history',
     timestamps: true
   }
 ); 

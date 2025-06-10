@@ -3,8 +3,10 @@
     import '@fortawesome/fontawesome-free/css/all.css';
     import Table from './Table.svelte';
     import { slide, fade } from 'svelte/transition';
+    import { isDemoMode } from '$lib/stores/demoStore';
   
     export let isOpen = false;
+    export let data: any = null; // Demo data passed from parent
   
     function closeModal() {
       isOpen = false;
@@ -41,7 +43,7 @@
           </button>
         </div>
         <div class="overflow-auto" style="height: calc(80vh - 4rem);">
-          <Table/>
+          <Table friends={data?.people || []} />
         </div>
       </div>
     </div>

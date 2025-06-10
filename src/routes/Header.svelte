@@ -10,7 +10,7 @@
 	import title from '$lib/images/friendships.svg';
  
 	interface Props {
-		data: { people: Friend[] };
+		data: { people: Friend[]; session: any };
 	}
 
 	const { data } = $props() as Props;
@@ -62,6 +62,11 @@
 						<a href="/map" class="text-xl" onclick={() => expandMenu = false}>Map</a>
 						<a href="/stats" class="text-xl" onclick={() => expandMenu = false}>Stats</a>
 						<a href="/tutorial" class="text-xl" onclick={() => expandMenu = false}>Tutorial</a>
+						{#if data.session}
+							<a href="/logout" class="text-xl" onclick={() => expandMenu = false}>Sign Out</a>
+						{:else}
+							<a href="/auth/signin" class="text-xl" onclick={() => expandMenu = false}>Sign In</a>
+						{/if}
 					</div>
 				</div>
 			</div>

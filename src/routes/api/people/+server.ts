@@ -1,8 +1,15 @@
 import { Group, Person } from '$lib/db/models';
-import { json } from '@sveltejs/kit';
+import { json, error } from '@sveltejs/kit';
 import { getPeopleNotAssociates, getGroups, getArchivedPeople } from '$lib/utils/load';
+import type { RequestHandler } from './$types';
 
-export async function GET() {
+export const GET: RequestHandler = async ({ locals }) => {
+    const session = await locals.auth();
+    
+    // Return 401 if not authenticated
+    if (!session) {
+        throw error(401, 'Unauthorized');
+    }
     try {
         const people = await getPeopleNotAssociates();
         const archivedPeople = await getArchivedPeople();

@@ -19,6 +19,7 @@ export class Person extends Model {
   declare birthday: Date | null;
   declare mnemonic: string | null;
   declare profile_pic_index: number;
+  declare userId: string;
   declare createdAt: Date;
   declare updatedAt: Date;
 }
@@ -60,6 +61,10 @@ Person.init(
         min: 0,
         max: 24
       }
+    },
+    userId: {
+      type: DataTypes.UUID,
+      allowNull: false
     }
   },
   {

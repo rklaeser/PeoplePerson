@@ -19,11 +19,12 @@ export interface Group {
     People?: Friend[];
 }
 
-export interface Journal {
+export interface History {
     id: string;
     personId: string;
-    title: string;
-    body: string;
+    changeType: 'prompt' | 'manual';
+    field: string;
+    detail: string;
     createdAt: Date;
     updatedAt: Date;
 }

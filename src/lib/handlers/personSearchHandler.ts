@@ -2,7 +2,7 @@ import type { ChatMessage, Friend } from '$lib/types';
 import { PersonService } from '$lib/services/personService.server';
 
 export class PersonSearchHandler {
-  static async handle(text: string, identification?: any): Promise<ChatMessage> {
+  static async handle(text: string, identification: any = null, userId: string): Promise<ChatMessage> {
     try {
       // If identification is provided, use those results
       if (identification) {
@@ -10,7 +10,7 @@ export class PersonSearchHandler {
         
         // Handle clarification case
         if (needsClarification && matchedIds.length > 1) {
-          const allFriends = await PersonService.getAllFriends();
+          const allFriends = await PersonService.getAllFriends(userId);
           const matchedFriends = allFriends.filter(friend => 
             matchedIds.includes(friend.id)
           );
@@ -36,7 +36,7 @@ export class PersonSearchHandler {
         }
 
         // Get the actual friend objects
-        const allFriends = await PersonService.getAllFriends();
+        const allFriends = await PersonService.getAllFriends(userId);
         const matchedFriends = allFriends.filter(friend => 
           matchedIds.includes(friend.id)
         );
@@ -55,7 +55,7 @@ export class PersonSearchHandler {
       }
 
       // Fallback: search all friends if no identification provided
-      const allFriends = await PersonService.getAllFriends();
+      const allFriends = await PersonService.getAllFriends(userId);
       return {
         role: 'system',
         success: true,
