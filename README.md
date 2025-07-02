@@ -1,5 +1,5 @@
-# Friendship
-Friendship is an AI friend assistant that helps you remember names and anything else about your friends. It's a learning project so there is no public website. Video walk through in the works.
+# PeoplePerson
+PeoplePerson is an AI friend assistant that helps you remember names and anything else about your friends. It's a learning project so there is no public website. Video walk through in the works.
 
 ![Screenshot 2025-06-05 at 3 25 40 PM](https://github.com/user-attachments/assets/bd91b445-2ac2-4cee-b9db-5446b205601b)
 
