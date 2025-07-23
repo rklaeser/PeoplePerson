@@ -22,4 +22,4 @@ Consider these patterns:
 Provide:
 - action: either "search", "create", or "update"
 - confidence: a number between 0 and 1 representing how confident you are in this classification
-`); 
+`);

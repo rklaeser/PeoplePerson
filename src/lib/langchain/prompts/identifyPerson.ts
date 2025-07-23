@@ -35,4 +35,4 @@ Examples:
 - "Update John's phone number" with 2 Johns → needsClarification=true, action="clarify"
 - "Update John Smith who works at Google" with 1 matching John → needsClarification=false
 - "Find all my friends named Sarah" → return all Sarahs, needsClarification=false
-`); 
+`);

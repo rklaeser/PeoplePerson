@@ -1,98 +1,72 @@
-import { Person, Group, History } from '$lib/db/models';
 import { fail, redirect } from '@sveltejs/kit';
-import { json } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import { getPeopleNotAssociates, getGroups } from '$lib/utils/load';
+import { apiClient, isAuthError } from '$lib/utils/apiClient';
 
-export const load: PageServerLoad = async (event) => {
-	// Check for Auth.js session
-	let session = null;
-	if (event.locals.auth) {
-		try {
-			session = await event.locals.auth();
-		} catch (e) {
-			// Auth.js not available, continue with no session
-		}
-	}
-	
-	// Redirect to signin if not authenticated
-	if (!session?.user?.id) {
-		throw redirect(303, '/auth/signin');
-	}
-	
-	try {
-		const people = await getPeopleNotAssociates(session.user.id);
-		const groups = await getGroups(session.user.id);
-
-		return {
-			people: people.map(person => person.toJSON()),
-			groups: groups.map(group => group.toJSON())
-		};
-	} catch (error) {
-		console.error('Error loading data:', error);
-		return {
-			people: [],
-			groups: []
-		};
-	}
+export const load: PageServerLoad = async ({ locals }) => {
+	// No server-side data loading needed since we're using Firebase auth
+	// Data will be fetched client-side with proper auth headers
+	return {
+		people: [],
+		groups: []
+	};
 };
 
 export const actions = {
 	create: async ({ request, locals }) => {
-		// Check for Auth.js session
-		let session = null;
-		if (locals.auth) {
-			try {
-				session = await locals.auth();
-			} catch (e) {
-				// Auth.js not available
-			}
-		}
-		
-		if (!session?.user?.id) {
+		// Check for Firebase session
+		const session = locals.session;
+
+		if (!session?.token) {
 			return fail(401, { error: 'Unauthorized' });
 		}
-		
+
 		const data = await request.formData();
 		const name = data.get('name') as string;
+		
 		try {
-			const newPerson = await Person.create({
+			const response = await apiClient.createPerson({
 				name: name,
-				intent: 'new',
-				userId: session.user.id
+				body: 'Add a description',
+				intent: 'new'
 			});
+
+			if (response.error) {
+				if (isAuthError(response.status)) {
+					return fail(401, { error: 'Unauthorized' });
+				}
+				return fail(500, { error: response.error });
+			}
+
 			console.log('🚀 Person added:', name);
-			return { id: newPerson.id };
+			return { id: response.data?.id };
 		} catch (error) {
 			console.error('API POST Error:', error);
 			return fail(500, { error: 'Failed to add person' });
 		}
 	},
+	
 	delete: async ({ request, locals }) => {
-		// Check for Auth.js session
-		let session = null;
-		if (locals.auth) {
-			try {
-				session = await locals.auth();
-			} catch (e) {
-				// Auth.js not available
-			}
-		}
-		
-		if (!session?.user?.id) {
+		// Check for Firebase session
+		const session = locals.session;
+
+		if (!session?.token) {
 			return fail(401, { error: 'Unauthorized' });
 		}
 
 		const data = await request.formData();
 		const id = data.get('id') as string;
 		const name = data.get('name') as string;
+		
 		try {
-			// Delete associated records first (with userId filter)
-			await History.destroy({ where: { personId: id, userId: session.user.id } });
-			
-			// Delete the person (ensure ownership)
-			await Person.destroy({ where: { id, userId: session.user.id } });
-			
+			const response = await apiClient.deletePerson(id);
+
+			if (response.error) {
+				if (isAuthError(response.status)) {
+					return fail(401, { error: 'Unauthorized' });
+				}
+				return fail(500, { error: response.error });
+			}
+
 			console.log('🚀 Person deleted:', name);
 		} catch (error) {
 			console.error('API DELETE Error:', error);

@@ -17,4 +17,4 @@ Please identify which person to update and what information to update:
 - mnemonic (optional, a memorable phrase or word)
 
 Only include fields that should be updated. If a field is not mentioned in the update request, set it to null.
-`); 
+`);

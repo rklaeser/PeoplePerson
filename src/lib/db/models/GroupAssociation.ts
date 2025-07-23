@@ -4,40 +4,40 @@ import { Person } from './Person';
 import { Group } from './Group';
 
 export class GroupAssociation extends Model {
-  declare groupId: string;
-  declare personId: string;
-  declare userId: string;
-  declare createdAt: Date;
-  declare updatedAt: Date;
+	declare groupId: string;
+	declare personId: string;
+	declare userId: string;
+	declare createdAt: Date;
+	declare updatedAt: Date;
 }
 
 GroupAssociation.init(
-  {
-    groupId: {
-      type: DataTypes.UUID,
-      allowNull: false,
-      references: {
-        model: Group,
-        key: 'id'
-      }
-    },
-    personId: {
-      type: DataTypes.UUID,
-      allowNull: false,
-      references: {
-        model: Person,
-        key: 'id'
-      }
-    },
-    userId: {
-      type: DataTypes.UUID,
-      allowNull: false
-    }
-  },
-  {
-    sequelize,
-    modelName: 'GroupAssociation',
-    tableName: 'groupAssociations',
-    timestamps: true
-  }
-); 
+	{
+		groupId: {
+			type: DataTypes.UUID,
+			allowNull: false,
+			references: {
+				model: Group,
+				key: 'id'
+			}
+		},
+		personId: {
+			type: DataTypes.UUID,
+			allowNull: false,
+			references: {
+				model: Person,
+				key: 'id'
+			}
+		},
+		userId: {
+			type: DataTypes.UUID,
+			allowNull: false
+		}
+	},
+	{
+		sequelize,
+		modelName: 'GroupAssociation',
+		tableName: 'groupAssociations',
+		timestamps: true
+	}
+);

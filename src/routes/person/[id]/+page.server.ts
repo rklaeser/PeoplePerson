@@ -1,388 +1,218 @@
-// File: src/routes/friend/[id]/+page.server.ts
 import { error, redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import { PersonService } from '$lib/services/personService.server';
 import { fail } from '@sveltejs/kit';
+import {
+	apiClient,
+	transformPersonToFriend,
+	isAuthError,
+	isNotFoundError
+} from '$lib/utils/apiClient';
 
-export const load: PageServerLoad = async ({ params, locals }) => {
-  // Check for demo session first
-  let session = locals.session;
-  
-  // Check for Auth.js session if no demo session and auth is available
-  if (!session && locals.auth) {
-    try {
-      session = await locals.auth();
-    } catch (e) {
-      // Auth.js not available, continue with no session
-    }
-  }
-  
-  // Redirect to signin if not authenticated
-  if (!session?.user?.id) {
-    throw redirect(303, '/auth/signin');
-  }
-  
-  const id = params.id;
-  
-  try {
-    const personData = await PersonService.getPersonWithDetails(id, session.user.id);
-    
-    if (!personData) {
-      throw error(404, 'Person not found');
-    }
-
-    console.log('🚀 Person fetched:', personData);
-    return personData;
-  } catch (err) {
-    console.error('Page Load Error:', err);
-    throw error(500, 'Failed to fetch person');
-  }
+export const load: PageServerLoad = async ({ params }) => {
+	// No server-side authentication - will be handled client-side like main page
+	// Data will be fetched client-side with proper auth headers
+	
+	return {
+		id: params.id,
+		friend: null, // Will be loaded client-side
+		associates: [],
+		history: [],
+		groupData: []
+	};
 };
 
 export const actions = {
-  updateBody: async ({ request, locals }) => {
-    // Check for demo session first
-    let session = locals.session;
+	updateBody: async ({ request, locals }) => {
+		// Check for Firebase session
+		const session = locals.session;
 
-    // Check for Auth.js session if no demo session and auth is available
-    if (!session && locals.auth) {
-      try {
-        session = await locals.auth();
-      } catch (e) {
-        // Auth.js not available, continue with no session
-      }
-    }
-    
-    if (!session?.user?.id) {
-      return fail(401, { error: 'Unauthorized' });
-    }
+		if (!session?.token) {
+			return fail(401, { error: 'Unauthorized' });
+		}
 
-    const data = await request.formData();
-    const id = data.get('id') as string;
-    const content = data.get('content') as string;
+		const data = await request.formData();
+		const id = data.get('id') as string;
+		const content = data.get('content') as string;
 
-    console.log('🚀 Updating content:', { id, content });
+		console.log('🚀 Updating content:', { id, content });
 
-    try {
-      await PersonService.updatePersonBody(id, content, session.user.id);
-    } catch (error) {
-      console.error('Update Body Error:', error);
-      return fail(500, { error: 'Failed to update content' });
-    }
-  },
+		try {
+			const response = await apiClient.updatePerson(id, { body: content });
 
-  updateBirthday: async ({ request, locals }) => {
-    // Check for demo session first
-    let session = locals.session;
+			if (response.error) {
+				if (isAuthError(response.status)) {
+					return fail(401, { error: 'Unauthorized' });
+				}
+				return fail(500, { error: response.error });
+			}
 
-    // Check for Auth.js session if no demo session and auth is available
-    if (!session && locals.auth) {
-      try {
-        session = await locals.auth();
-      } catch (e) {
-        // Auth.js not available, continue with no session
-      }
-    }
-    
-    if (!session?.user?.id) {
-      return fail(401, { error: 'Unauthorized' });
-    }
+			return { success: true };
+		} catch (error) {
+			console.error('Update Body Error:', error);
+			return fail(500, { error: 'Failed to update content' });
+		}
+	},
 
-    const data = await request.formData();
-    const id = data.get('id') as string;
-    const birthday = data.get('birthday') as string;
-    
-    console.log('🚀 Updating birthday:', { id, birthday });
+	updateBirthday: async ({ request, locals }) => {
+		// Check for Firebase session
+		const session = locals.session;
 
-    try {
-      await PersonService.updatePersonBirthday(id, birthday, session.user.id);
-    } catch (error) {
-      console.error('Update Birthday Error:', error);
-      return fail(500, { error: 'Failed to update birthday' });
-    }
-  },
+		if (!session?.token) {
+			return fail(401, { error: 'Unauthorized' });
+		}
 
-  updateMnemonic: async ({ request, locals }) => {
-    // Check for demo session first
-    let session = locals.session;
+		const data = await request.formData();
+		const id = data.get('id') as string;
+		const birthday = data.get('birthday') as string;
 
-    // Check for Auth.js session if no demo session and auth is available
-    if (!session && locals.auth) {
-      try {
-        session = await locals.auth();
-      } catch (e) {
-        // Auth.js not available, continue with no session
-      }
-    }
-    
-    if (!session?.user?.id) {
-      return fail(401, { error: 'Unauthorized' });
-    }
+		console.log('🚀 Updating birthday:', { id, birthday });
 
-    const data = await request.formData();
-    const id = data.get('id') as string;
-    const mnemonic = data.get('mnemonic') as string;
-    
-    console.log('🚀 Updating mnemonic:', { id, mnemonic });
+		try {
+			const response = await apiClient.updatePerson(id, { birthday: birthday || null });
 
-    try {
-      await PersonService.updatePersonMnemonic(id, mnemonic, session.user.id);
-    } catch (error) {
-      console.error('Update Mnemonic Error:', error);
-      return fail(500, { error: 'Failed to update mnemonic' });
-    }
-  },
+			if (response.error) {
+				if (isAuthError(response.status)) {
+					return fail(401, { error: 'Unauthorized' });
+				}
+				return fail(500, { error: response.error });
+			}
 
-  create: async ({ request, locals }) => {
-    // Check for demo session first
-    let session = locals.session;
+			return { success: true };
+		} catch (error) {
+			console.error('Update Birthday Error:', error);
+			return fail(500, { error: 'Failed to update birthday' });
+		}
+	},
 
-    // Check for Auth.js session if no demo session and auth is available
-    if (!session && locals.auth) {
-      try {
-        session = await locals.auth();
-      } catch (e) {
-        // Auth.js not available, continue with no session
-      }
-    }
-    
-    if (!session?.user?.id) {
-      return fail(401, { error: 'Unauthorized' });
-    }
+	updateMnemonic: async ({ request, locals }) => {
+		// Check for Firebase session
+		const session = locals.session;
 
-    const data = await request.formData();
-    const name = data.get('name');
-    
-    if (!name || typeof name !== 'string') {
-      console.error('Invalid name:', name);
-      return fail(400, { error: 'Invalid name' });
-    }
+		if (!session?.token) {
+			return fail(401, { error: 'Unauthorized' });
+		}
 
-    try {
-      await PersonService.createPerson(name, session.user.id);
-    } catch (error) {
-      console.error('Create Person Error:', error);
-      return fail(500, { error: 'Failed to add person' });
-    }
-  },
+		const data = await request.formData();
+		const id = data.get('id') as string;
+		const mnemonic = data.get('mnemonic') as string;
 
-  delete: async ({ request, locals }) => {
-    // Check for demo session first
-    let session = locals.session;
+		console.log('🚀 Updating mnemonic:', { id, mnemonic });
 
-    // Check for Auth.js session if no demo session and auth is available
-    if (!session && locals.auth) {
-      try {
-        session = await locals.auth();
-      } catch (e) {
-        // Auth.js not available, continue with no session
-      }
-    }
-    
-    if (!session?.user?.id) {
-      return fail(401, { error: 'Unauthorized' });
-    }
+		try {
+			const response = await apiClient.updatePerson(id, { mnemonic: mnemonic || null });
 
-    console.log('🚀 Deleting person: server');
-    const data = await request.formData();
-    const id = data.get('id') as string;
-    const name = data.get('name') as string;
-    
-    console.log('🚀 Deleting person:', { id, name });
+			if (response.error) {
+				if (isAuthError(response.status)) {
+					return fail(401, { error: 'Unauthorized' });
+				}
+				return fail(500, { error: response.error });
+			}
 
-    try {
-      await PersonService.deletePerson(id, name, session.user.id);
-    } catch (error) {
-      console.error('Delete Person Error:', error);
-      return fail(500, { error: 'Failed to delete person' });
-    }
-  },
+			return { success: true };
+		} catch (error) {
+			console.error('Update Mnemonic Error:', error);
+			return fail(500, { error: 'Failed to update mnemonic' });
+		}
+	},
 
-  createAssociation: async ({ request, locals }) => {
-    // Check for demo session first
-    let session = locals.session;
+	create: async ({ request, locals }) => {
+		// Check for Firebase session
+		const session = locals.session;
 
-    // Check for Auth.js session if no demo session and auth is available
-    if (!session && locals.auth) {
-      try {
-        session = await locals.auth();
-      } catch (e) {
-        // Auth.js not available, continue with no session
-      }
-    }
-    
-    if (!session?.user?.id) {
-      return fail(401, { error: 'Unauthorized' });
-    }
+		if (!session?.token) {
+			return fail(401, { error: 'Unauthorized' });
+		}
 
-    const data = await request.formData();
-    const primaryId = data.get('id') as string;
-    const associateName = data.get('associate') as string;
-    
-    console.log('🚀 Creating association:', { primaryId, associateName });
+		const data = await request.formData();
+		const name = data.get('name');
 
-    try {
-      await PersonService.createAssociation(primaryId, associateName, session.user.id);
-    } catch (error) {
-      console.error('Create Association Error:', error);
-      return fail(500, { error: 'Failed to create association' });
-    }
-  },
+		if (!name || typeof name !== 'string') {
+			console.error('Invalid name:', name);
+			return fail(400, { error: 'Invalid name' });
+		}
 
-  deleteAssociation: async ({ request, locals }) => {
-    // Check for demo session first
-    let session = locals.session;
+		try {
+			const response = await apiClient.createPerson({
+				name,
+				body: 'Add a description',
+				intent: 'new'
+			});
 
-    // Check for Auth.js session if no demo session and auth is available
-    if (!session && locals.auth) {
-      try {
-        session = await locals.auth();
-      } catch (e) {
-        // Auth.js not available, continue with no session
-      }
-    }
-    
-    if (!session?.user?.id) {
-      return fail(401, { error: 'Unauthorized' });
-    }
+			if (response.error) {
+				if (isAuthError(response.status)) {
+					return fail(401, { error: 'Unauthorized' });
+				}
+				return fail(500, { error: response.error });
+			}
 
-    const data = await request.formData();
-    const primaryId = data.get('id') as string;
-    const associateId = data.get('associate') as string;
-    
-    console.log('🚀 Deleting association:', { primaryId, associateId });
+			return { success: true, id: response.data?.id };
+		} catch (error) {
+			console.error('Create Person Error:', error);
+			return fail(500, { error: 'Failed to add person' });
+		}
+	},
 
-    try {
-      await PersonService.deleteAssociation(primaryId, associateId, session.user.id);
-    } catch (error) {
-      console.error('Delete Association Error:', error);
-      return fail(500, { error: 'Failed to delete association' });
-    }
-  },
+	delete: async ({ request, locals }) => {
+		// Check for Firebase session
+		const session = locals.session;
 
-  createHistory: async ({ request, locals }) => {
-    // Check for demo session first
-    let session = locals.session;
+		if (!session?.token) {
+			return fail(401, { error: 'Unauthorized' });
+		}
 
-    // Check for Auth.js session if no demo session and auth is available
-    if (!session && locals.auth) {
-      try {
-        session = await locals.auth();
-      } catch (e) {
-        // Auth.js not available, continue with no session
-      }
-    }
-    
-    if (!session?.user?.id) {
-      return fail(401, { error: 'Unauthorized' });
-    }
+		console.log('🚀 Deleting person: server');
+		const data = await request.formData();
+		const id = data.get('id') as string;
+		const name = data.get('name') as string;
 
-    const data = await request.formData();
-    const personId = data.get('id') as string;
-    const changeType = data.get('changeType') as string;
-    const field = data.get('field') as string;
-    const detail = data.get('detail') as string;
-    
-    console.log('🚀 Creating history entry:', { personId, changeType, field, detail });
+		console.log('🚀 Deleting person:', { id, name });
 
-    try {
-      await PersonService.createHistoryEntry(personId, changeType as any, field, detail, session.user.id);
-    } catch (error) {
-      console.error('Create History Error:', error);
-      return fail(500, { error: 'Failed to create history entry' });
-    }
-  },
+		try {
+			const response = await apiClient.deletePerson(id);
 
-  addGroup: async ({ request, locals }) => {
-    // Check for demo session first
-    let session = locals.session;
+			if (response.error) {
+				if (isAuthError(response.status)) {
+					return fail(401, { error: 'Unauthorized' });
+				}
+				if (response.status === 501) {
+					return fail(501, { error: 'Delete functionality not yet implemented in API' });
+				}
+				return fail(500, { error: response.error });
+			}
 
-    // Check for Auth.js session if no demo session and auth is available
-    if (!session && locals.auth) {
-      try {
-        session = await locals.auth();
-      } catch (e) {
-        // Auth.js not available, continue with no session
-      }
-    }
-    
-    if (!session?.user?.id) {
-      return fail(401, { error: 'Unauthorized' });
-    }
+			return { success: true };
+		} catch (error) {
+			console.error('Delete Person Error:', error);
+			return fail(500, { error: 'Failed to delete person' });
+		}
+	},
 
-    const data = await request.formData();
-    const groupName = data.get('name') as string;
-    const personId = data.get('id') as string;
-    
-    console.log('🚀 Adding person to group:', { personId, groupName });
+	// Note: createAssociation functionality is not available in current FastAPI endpoints
+	// This would need to be implemented in the API first
+	createAssociation: async ({ request, locals }) => {
+		// Check for Firebase session
+		const session = locals.session;
 
-    try {
-      await PersonService.addPersonToGroup(personId, groupName, session.user.id);
-    } catch (error) {
-      console.error('Add Group Error:', error);
-      return fail(500, { error: 'Failed to add person to group' });
-    }
-  },
+		if (!session?.token) {
+			return fail(401, { error: 'Unauthorized' });
+		}
 
-  removeGroup: async ({ request, locals }) => {
-    // Check for demo session first
-    let session = locals.session;
+		// For now, return not implemented since this endpoint doesn't exist in FastAPI
+		return fail(501, { error: 'Association functionality not yet implemented in API' });
 
-    // Check for Auth.js session if no demo session and auth is available
-    if (!session && locals.auth) {
-      try {
-        session = await locals.auth();
-      } catch (e) {
-        // Auth.js not available, continue with no session
-      }
-    }
-    
-    if (!session?.user?.id) {
-      return fail(401, { error: 'Unauthorized' });
-    }
-
-    const data = await request.formData();
-    const groupId = data.get('groupId') as string;
-    const personId = data.get('id') as string;
-    
-    console.log('🚀 Removing person from group:', { personId, groupId });
-
-    try {
-      await PersonService.removePersonFromGroup(personId, groupId, session.user.id);
-    } catch (error) {
-      console.error('Remove Group Error:', error);
-      return fail(500, { error: 'Failed to remove person from group' });
-    }
-  },
-
-  updateStatus: async ({ request, locals }) => {
-    // Check for demo session first
-    let session = locals.session;
-
-    // Check for Auth.js session if no demo session and auth is available
-    if (!session && locals.auth) {
-      try {
-        session = await locals.auth();
-      } catch (e) {
-        // Auth.js not available, continue with no session
-      }
-    }
-    
-    if (!session?.user?.id) {
-      return fail(401, { error: 'Unauthorized' });
-    }
-
-    const data = await request.formData();
-    const id = data.get('id') as string;
-    const intent = data.get('intent') as string;
-    
-    console.log('🚀 Updating status:', { id, intent });
-
-    try {
-      await PersonService.updatePersonStatus(id, intent, session.user.id);
-    } catch (error) {
-      console.error('Update Status Error:', error);
-      return fail(500, { error: 'Failed to update status' });
-    }
-  },
+		// TODO: Implement when FastAPI has association endpoints
+		// const data = await request.formData();
+		// const primaryId = data.get('id') as string;
+		// const associateName = data.get('associate') as string;
+		//
+		// console.log('🚀 Creating association:', { primaryId, associateName });
+		//
+		// try {
+		//     const response = await apiClient.createAssociation(primaryId, associateName);
+		//     // handle response...
+		// } catch (error) {
+		//     console.error('Create Association Error:', error);
+		//     return fail(500, { error: 'Failed to create association' });
+		// }
+	}
 };

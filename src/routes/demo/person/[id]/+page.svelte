@@ -9,13 +9,13 @@
 	import JournalEntries from '../../../person/[id]/JournalEntries.svelte';
 	import ProfilePic from '$lib/components/ProfilePic.svelte';
 	import { onMount } from 'svelte';
-	import { 
-		demoActions, 
-		demoPeople, 
-		demoGroups, 
-		demoGroupAssociations, 
+	import {
+		demoActions,
+		demoPeople,
+		demoGroups,
+		demoGroupAssociations,
 		demoJournals,
-		isDemoMode 
+		isDemoMode
 	} from '$lib/stores/demoStore';
 
 	export let data;
@@ -27,30 +27,35 @@
 	});
 
 	// Create reactive demo data structure
-	$: friend = $demoPeople.find(p => p.id === data.id);
+	$: friend = $demoPeople.find((p) => p.id === data.id);
 	$: friendGroups = $demoGroupAssociations
-		.filter(assoc => assoc.personId === data.id)
-		.map(assoc => $demoGroups.find(g => g.id === assoc.groupId))
+		.filter((assoc) => assoc.personId === data.id)
+		.map((assoc) => $demoGroups.find((g) => g.id === assoc.groupId))
 		.filter(Boolean);
-	$: friendJournals = $demoJournals.filter(j => j.personId === data.id);
+	$: friendJournals = $demoJournals.filter((j) => j.personId === data.id);
 	$: associates = []; // Demo doesn't have person associations yet
 
-	$: demoData = friend ? {
-		friend: {
-			...friend,
-			Groups: friendGroups,
-			Journals: friendJournals,
-			Associates: associates
-		},
-		groups: $demoGroups,
-		isDemo: true
-	} : null;
+	$: demoData = friend
+		? {
+				friend: {
+					...friend,
+					Groups: friendGroups,
+					Journals: friendJournals,
+					Associates: associates
+				},
+				groups: $demoGroups,
+				isDemo: true
+			}
+		: null;
 </script>
 
 <!-- Demo Banner -->
 <div class="bg-yellow-600 text-black px-4 py-2 text-center font-semibold">
 	🎭 DEMO MODE - All changes are simulated
-	<a href="/auth/signin" class="ml-4 bg-black text-yellow-600 px-3 py-1 rounded text-sm hover:bg-gray-800">
+	<a
+		href="/auth/signin"
+		class="ml-4 bg-black text-yellow-600 px-3 py-1 rounded text-sm hover:bg-gray-800"
+	>
 		Exit Demo
 	</a>
 </div>
