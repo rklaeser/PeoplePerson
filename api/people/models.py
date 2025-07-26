@@ -171,3 +171,61 @@ class PersonAssociation(models.Model):
 
     def __str__(self):
         return f"{self.person.name} -> {self.associate.name}"
+
+
+class Entry(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    content = models.TextField()
+    processing_status = models.CharField(
+        max_length=20,
+        default='pending',
+        choices=[
+            ('pending', 'Pending'),
+            ('processing', 'Processing'),
+            ('completed', 'Completed'),
+            ('failed', 'Failed'),
+        ]
+    )
+    processing_result = models.TextField(blank=True, null=True)
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='entries',
+        db_column='userId'
+    )
+    people = models.ManyToManyField(
+        Person,
+        through='EntryPerson',
+        related_name='entries'
+    )
+    created_at = models.DateTimeField(auto_now_add=True, db_column='createdAt')
+    updated_at = models.DateTimeField(auto_now=True, db_column='updatedAt')
+
+    class Meta:
+        db_table = 'entries'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Entry {self.id} - {self.created_at}"
+
+
+class EntryPerson(models.Model):
+    entry = models.ForeignKey(
+        Entry,
+        on_delete=models.CASCADE,
+        db_column='entryId'
+    )
+    person = models.ForeignKey(
+        Person,
+        on_delete=models.CASCADE,
+        db_column='personId'
+    )
+    created_at = models.DateTimeField(auto_now_add=True, db_column='createdAt')
+    updated_at = models.DateTimeField(auto_now=True, db_column='updatedAt')
+
+    class Meta:
+        db_table = 'entryPeople'
+        unique_together = ('entry', 'person')
+
+    def __str__(self):
+        return f"{self.entry.id} -> {self.person.name}"

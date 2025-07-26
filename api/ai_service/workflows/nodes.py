@@ -1,8 +1,8 @@
 from typing import Dict, Any
 # Removed RunnableSequence import - using pipe operator instead
-from ..config import model
-from ..schemas.ai import IntentDetection, PersonIdentification, CreatePersonData, UpdatePersonData
-from .prompts import (
+from ai_service.config import model
+from ai_service.schemas.ai import IntentDetection, PersonIdentification, CreatePersonData, UpdatePersonData
+from ai_service.workflows.prompts import (
     detect_intent_prompt,
     identify_person_prompt,
     extract_person_data_prompt,
@@ -122,7 +122,7 @@ async def search_handler_node(state: Dict[str, Any]) -> Dict[str, Any]:
 
 async def create_handler_node(state: Dict[str, Any]) -> Dict[str, Any]:
     """Handle create requests"""
-    from app.services.person_service import create_person
+    from ai_service.services.person_service import create_person
     
     structured_model = model.with_structured_output(CreatePersonData)
     chain = extract_person_data_prompt | structured_model
@@ -149,7 +149,7 @@ async def create_handler_node(state: Dict[str, Any]) -> Dict[str, Any]:
 
 async def update_handler_node(state: Dict[str, Any]) -> Dict[str, Any]:
     """Handle update requests"""
-    from app.services.person_service import update_person
+    from ai_service.services.person_service import update_person
     
     if not state["matched_ids"]:
         state["result_message"] = "Could not find the person to update."

@@ -36,8 +36,9 @@ db-ps:
 
 # Remove the database container and its volumes
 db-clean:
-	docker rm -f $(CONTAINER_NAME) || true
-	docker volume prune -f
+	@docker stop $(CONTAINER_NAME) 2>/dev/null || true
+	@docker rm $(CONTAINER_NAME) 2>/dev/null || true
+	@docker volume prune -f
 
 # Show database URL
 db-url:
@@ -47,6 +48,7 @@ db-url:
 
 # Sync database schema with Django
 db-sync:
+	cd api && . venv/bin/activate && python manage.py makemigrations --noinput
 	cd api && . venv/bin/activate && python manage.py migrate
 
 # Create Django superuser (optional)
@@ -96,37 +98,63 @@ firebase-ui:
 	@echo "Firebase Emulator UI available at: http://localhost:4000"
 	@echo "Firebase Auth Emulator at: http://localhost:9099"
 
-# FastAPI commands
-.PHONY: api-install fastapi-run
-api-install:
-	@echo "Installing Python dependencies..."
-	cd api && python3 -m venv venv && . venv/bin/activate && pip install -r requirements.txt
+# Start all services in tmux session
+.PHONY: start-all stop-all
 
-fastapi-run:
-	@echo "Running FastAPI AI server..."
-	cd api && . venv/bin/activate && python run_fastapi.py
+start-all:
+	@echo "Starting all services in tmux session 'peopleperson'..."
+	@tmux has-session -t peopleperson 2>/dev/null && (echo "Session 'peopleperson' already exists. Run 'make stop-all' first." && exit 1) || true
+	@echo "1. Creating tmux session and starting Firebase first..."
+	@tmux new-session -d -s peopleperson -n firebase 'firebase emulators:start --only auth'
+	@echo "Waiting for Firebase to be ready..."
+	@sleep 8
+	@echo "2. Cleaning up any existing containers..."
+	@docker stop $(CONTAINER_NAME) 2>/dev/null || true
+	@docker rm $(CONTAINER_NAME) 2>/dev/null || true
+	@docker-compose down -v
+	@echo "3. Starting Docker services (PostgreSQL, Redis, Celery)..."
+	@docker-compose up -d
+	@echo "Waiting for database to be ready..."
+	@sleep 5
+	@echo "4. Setting up database..."
+	@make db-sync
+	@make db-seed
+	@echo "5. Starting remaining services in tmux..."
+	@tmux split-window -t peopleperson:0 -h 'docker-compose logs -f'
+	@tmux split-window -t peopleperson:0 -h 'npm run dev'
+	@tmux select-layout -t peopleperson:0 even-horizontal
+	@tmux select-pane -t peopleperson:0.0
+	@tmux split-window -t peopleperson:0 -v 'cd api && . venv/bin/activate && python run_django.py'
+	@tmux select-pane -t peopleperson:0.1
+	@tmux select-pane -t peopleperson:0.2
+	@tmux split-window -t peopleperson:0 -v 'echo "Frontend output above"'
+	@tmux select-layout -t peopleperson:0 tiled
+	@echo ""
+	@echo "All services started in tmux session 'peopleperson'!"
+	@echo ""
+	@echo "Services available at:"
+	@echo "- Frontend: http://localhost:5173"
+	@echo "- Django API: http://localhost:8000"
+	@echo "- Firebase Auth: http://localhost:9099"
+	@echo "- Firebase UI: http://localhost:4000"
+	@echo ""
+	@echo "To view services: tmux attach -t peopleperson"
+	@echo "To detach: Ctrl+B then D"
+	@echo "To stop all: make stop-all"
 
-.PHONY: api-run
-api-run:
-	@echo "Running FastAPI server..."
-	@if [ ! -d "api/venv" ]; then \
-		echo "Virtual environment not found. Running 'make api-install' first..."; \
-		$(MAKE) api-install; \
-	fi
-	cd api && . venv/bin/activate && python run.py
-
-.PHONY: api-dev
-api-dev:
-	@echo "Running FastAPI in development mode..."
-	@if [ ! -d "api/venv" ]; then \
-		echo "Virtual environment not found. Running 'make api-install' first..."; \
-		$(MAKE) api-install; \
-	fi
-	cd api && . venv/bin/activate && uvicorn app.main:app --reload --port 8000
+stop-all:
+	@echo "Stopping all services..."
+	@tmux kill-session -t peopleperson 2>/dev/null || true
+	@docker-compose down -v
+	@echo "All services stopped"
 
 # Help command
 help:
 	@echo "Available commands:"
+	@echo ""
+	@echo "Quick start:"
+	@echo "  make start-all    - Start all services in tmux session"
+	@echo "  make stop-all     - Stop all services and tmux session"
 	@echo ""
 	@echo "Database commands:"
 	@echo "  make db-start     - Start the PostgreSQL container"
@@ -149,9 +177,5 @@ help:
 	@echo "  make firebase-start - Start Firebase Auth emulator (port 9099)"
 	@echo "  make firebase-stop  - Stop Firebase emulators"
 	@echo "  make firebase-ui    - Show Firebase emulator URLs"
-	@echo ""
-	@echo "FastAPI commands:"
-	@echo "  make api-install  - Install Python dependencies"
-	@echo "  make fastapi-run  - Run FastAPI AI server (port 8001)"
 	@echo ""
 	@echo "  make help         - Show this help message" 

@@ -22,6 +22,10 @@
 	let showChat = false;
 	let isCreateModalOpen = false;
 
+	// Entry creation state
+	let entryContent = '';
+	let isCreatingEntry = false;
+
 	async function handleSubmit() {
 		if (!inputMessage.trim()) return;
 
@@ -193,6 +197,40 @@
 		return headers[Math.floor(Math.random() * headers.length)];
 	}
 
+	async function handleCreateEntry() {
+		if (!entryContent.trim()) return;
+
+		isCreatingEntry = true;
+
+		try {
+			const response = await fetch('http://localhost:8000/api/entries/', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Authorization': `Bearer ${await $authStore.user?.getIdToken()}`
+				},
+				body: JSON.stringify({ content: entryContent })
+			});
+
+			if (!response.ok) {
+				throw new Error('Failed to create entry');
+			}
+
+			const result = await response.json();
+			
+			// Clear the entry content
+			entryContent = '';
+			
+			// Show success message
+			alert(`Entry created successfully! ID: ${result.id}`);
+		} catch (e) {
+			console.error('Error creating entry:', e);
+			alert('Failed to create entry: ' + (e instanceof Error ? e.message : 'Unknown error'));
+		} finally {
+			isCreatingEntry = false;
+		}
+	}
+
 	onMount(() => {
 		// Initialize Firebase auth
 		const unsubscribe = authStore.init();
@@ -260,6 +298,26 @@
 				>
 					Add Friend
 				</button>
+			</div>
+
+			<!-- Entry creation section -->
+			<div class="mt-12 border-t pt-8">
+				<h2 class="text-xl font-semibold mb-4 text-center">Create an Entry</h2>
+				<div class="flex gap-2">
+					<textarea
+						bind:value={entryContent}
+						placeholder="I met a new friend Jill..."
+						class="bg-gray-800 text-gray-100 flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
+						rows="3"
+					></textarea>
+					<button
+						on:click={handleCreateEntry}
+						disabled={isCreatingEntry || !entryContent.trim()}
+						class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+					>
+						{isCreatingEntry ? '...' : 'Create entry'}
+					</button>
+				</div>
 			</div>
 		</div>
 	</div>

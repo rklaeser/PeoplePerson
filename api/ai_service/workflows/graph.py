@@ -1,6 +1,6 @@
 from langgraph.graph import StateGraph, END
-from app.workflows.state import PersonState
-from app.workflows.nodes import (
+from ai_service.workflows.state import PersonState
+from ai_service.workflows.nodes import (
     detect_intent_node,
     check_confidence_node,
     identify_person_node,

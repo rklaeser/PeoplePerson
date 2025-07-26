@@ -8,6 +8,7 @@ router.register(r'groups', views.GroupViewSet, basename='group')
 router.register(r'history', views.HistoryViewSet, basename='history')
 router.register(r'person-associations', views.PersonAssociationViewSet, basename='person-association')
 router.register(r'group-associations', views.GroupAssociationViewSet, basename='group-association')
+router.register(r'entries', views.EntryViewSet, basename='entry')
 
 urlpatterns = [
     path('', include(router.urls)),

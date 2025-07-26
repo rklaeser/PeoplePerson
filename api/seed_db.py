@@ -6,7 +6,7 @@ Replicates the data from the SvelteKit seed.ts file
 
 import asyncio
 import uuid
-from app.database import engine, SessionLocal, User, Person, Group, GroupAssociation, PersonAssociation, IntentEnum, Base
+from ai_service.database import engine, SessionLocal, User, Person, Group, GroupAssociation, PersonAssociation, IntentEnum, Base
 from sqlalchemy.orm import Session
 
 # Demo user data (matches the FastAPI auth.py development bypass)

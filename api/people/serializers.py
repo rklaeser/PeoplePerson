@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Person, Group, History, User, PersonAssociation, GroupAssociation
+from .models import Person, Group, History, User, PersonAssociation, GroupAssociation, Entry, EntryPerson
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -22,7 +22,12 @@ class PersonSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         # Set user from context (will be provided by the view)
-        validated_data['user'] = self.context['request'].user
+        user = self.context['request'].user
+        if hasattr(user, '_user_obj'):
+            validated_data['user'] = user._user_obj
+        else:
+            from .models import User
+            validated_data['user'] = User.objects.get(id=user.id)
         return super().create(validated_data)
 
 
@@ -57,7 +62,12 @@ class GroupSerializer(serializers.ModelSerializer):
         return obj.people.count()
 
     def create(self, validated_data):
-        validated_data['user'] = self.context['request'].user
+        user = self.context['request'].user
+        if hasattr(user, '_user_obj'):
+            validated_data['user'] = user._user_obj
+        else:
+            from .models import User
+            validated_data['user'] = User.objects.get(id=user.id)
         return super().create(validated_data)
 
 
@@ -74,7 +84,12 @@ class HistorySerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at', 'updated_at']
 
     def create(self, validated_data):
-        validated_data['user'] = self.context['request'].user
+        user = self.context['request'].user
+        if hasattr(user, '_user_obj'):
+            validated_data['user'] = user._user_obj
+        else:
+            from .models import User
+            validated_data['user'] = User.objects.get(id=user.id)
         return super().create(validated_data)
 
 
@@ -99,7 +114,12 @@ class GroupAssociationSerializer(serializers.ModelSerializer):
         read_only_fields = ['created_at', 'updated_at']
 
     def create(self, validated_data):
-        validated_data['user'] = self.context['request'].user
+        user = self.context['request'].user
+        if hasattr(user, '_user_obj'):
+            validated_data['user'] = user._user_obj
+        else:
+            from .models import User
+            validated_data['user'] = User.objects.get(id=user.id)
         return super().create(validated_data)
 
 
@@ -114,3 +134,54 @@ class PersonDetailSerializer(PersonSerializer):
     def get_associates(self, obj):
         associations = PersonAssociation.objects.filter(person=obj).select_related('associate')
         return PersonSerializer([assoc.associate for assoc in associations], many=True).data
+
+
+class EntrySerializer(serializers.ModelSerializer):
+    user_id = serializers.UUIDField(source='user.id', read_only=True)
+    people = PersonSerializer(many=True, read_only=True)
+    
+    class Meta:
+        model = Entry
+        fields = ['id', 'content', 'processing_status', 'processing_result', 'user_id', 'people', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'processing_status', 'processing_result', 'created_at', 'updated_at']
+    
+    def create(self, validated_data):
+        # Get the actual User model instance from the FirebaseUser wrapper
+        user = self.context['request'].user
+        if hasattr(user, '_user_obj'):
+            # This is a FirebaseUser wrapper, get the actual model
+            validated_data['user'] = user._user_obj
+        else:
+            # Fallback - try to get by id
+            from .models import User
+            validated_data['user'] = User.objects.get(id=user.id)
+        return super().create(validated_data)
+
+
+class EntryCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Entry
+        fields = ['id', 'content']
+        read_only_fields = ['id']
+    
+    def create(self, validated_data):
+        # Get the actual User model instance from the FirebaseUser wrapper
+        user = self.context['request'].user
+        if hasattr(user, '_user_obj'):
+            # This is a FirebaseUser wrapper, get the actual model
+            validated_data['user'] = user._user_obj
+        else:
+            # Fallback - try to get by id
+            from .models import User
+            validated_data['user'] = User.objects.get(id=user.id)
+        return super().create(validated_data)
+
+
+class EntryPersonSerializer(serializers.ModelSerializer):
+    entry_id = serializers.UUIDField(source='entry.id', read_only=True)
+    person_name = serializers.CharField(source='person.name', read_only=True)
+    
+    class Meta:
+        model = EntryPerson
+        fields = ['entry_id', 'person', 'person_name', 'created_at', 'updated_at']
+        read_only_fields = ['created_at', 'updated_at']

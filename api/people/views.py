@@ -4,10 +4,11 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q
-from .models import Person, Group, History, PersonAssociation, GroupAssociation
+from .models import Person, Group, History, PersonAssociation, GroupAssociation, Entry, EntryPerson
 from .serializers import (
     PersonSerializer, PersonCreateSerializer, PersonUpdateSerializer, PersonDetailSerializer,
-    GroupSerializer, HistorySerializer, PersonAssociationSerializer, GroupAssociationSerializer
+    GroupSerializer, HistorySerializer, PersonAssociationSerializer, GroupAssociationSerializer,
+    EntrySerializer, EntryCreateSerializer, EntryPersonSerializer
 )
 from .permissions import IsOwnerOrReadOnly, IsAuthenticatedOrInternalService
 
@@ -155,3 +156,99 @@ class GroupAssociationViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user_id = self.request.user.id
         return GroupAssociation.objects.filter(user_id=user_id).select_related('person', 'group')
+
+
+class EntryViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    ordering_fields = ['created_at']
+    ordering = ['-created_at']
+    
+    def get_queryset(self):
+        user_id = self.request.user.id
+        return Entry.objects.filter(user_id=user_id).prefetch_related('people')
+    
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return EntryCreateSerializer
+        return EntrySerializer
+    
+    def create(self, request, *args, **kwargs):
+        # Create the entry
+        response = super().create(request, *args, **kwargs)
+        
+        # If successful, trigger async processing
+        if response.status_code == 201:
+            entry_id = response.data['id']
+            
+            # Import here to avoid circular imports
+            from django.db import transaction
+            from .tasks import process_entry_with_langchain
+            
+            # Queue the task after the transaction commits
+            # This ensures the entry is in the database when the worker processes it
+            transaction.on_commit(lambda: process_entry_with_langchain.delay(entry_id))
+            
+        return response
+    
+    @action(detail=True, methods=['post'])
+    def process(self, request, pk=None):
+        """
+        Process an entry to extract people and assign them to the entry.
+        This endpoint will eventually use AI to analyze the content and identify people.
+        """
+        entry = self.get_object()
+        
+        # TODO: Implement AI processing to extract people from entry.content
+        # For now, this is a placeholder that returns a success message
+        
+        return Response({
+            'detail': 'Entry processing not yet implemented',
+            'entry_id': entry.id,
+            'content': entry.content
+        })
+    
+    @action(detail=True, methods=['post'])
+    def add_person(self, request, pk=None):
+        """Add a person to this entry"""
+        entry = self.get_object()
+        person_id = request.data.get('person_id')
+        
+        if not person_id:
+            return Response({'detail': 'person_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            person = Person.objects.get(id=person_id, user_id=request.user.id)
+        except Person.DoesNotExist:
+            return Response({'detail': 'Person not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Create the association
+        association, created = EntryPerson.objects.get_or_create(
+            entry=entry,
+            person=person
+        )
+        
+        if created:
+            return Response({'detail': f'Added {person.name} to entry'})
+        else:
+            return Response({'detail': f'{person.name} already associated with entry'})
+    
+    @action(detail=True, methods=['delete'])
+    def remove_person(self, request, pk=None):
+        """Remove a person from this entry"""
+        entry = self.get_object()
+        person_id = request.data.get('person_id')
+        
+        if not person_id:
+            return Response({'detail': 'person_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            association = EntryPerson.objects.get(
+                entry=entry,
+                person_id=person_id
+            )
+            person_name = association.person.name
+            association.delete()
+            return Response({'detail': f'Removed {person_name} from entry'})
+        except EntryPerson.DoesNotExist:
+            return Response({'detail': 'Person not associated with this entry'}, status=status.HTTP_404_NOT_FOUND)

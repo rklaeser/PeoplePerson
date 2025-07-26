@@ -1,0 +1,48 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16
+    container_name: peopleperson-postgres
+    environment:
+      POSTGRES_DB: peopleperson
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis for Celery broker
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --save 60 1 --loglevel warning
+
+  # Celery worker
+  celery:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    command: celery -A django_project worker --loglevel=info
+    volumes:
+      - ./api:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/peopleperson
+      - DB_URL=postgresql://postgres:postgres@postgres:5432/peopleperson
+      - REDIS_URL=redis://redis:6379/0
+    env_file:
+      - ./api/.env
+
+volumes:
+  postgres_data:
