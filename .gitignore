@@ -8,6 +8,11 @@ node_modules
 
 # OS
 .DS_Store
+
+# Firebase
+*firebase*adminsdk*.json
+*.key.json
+firebase-debug.log
 Thumbs.db
 
 # Env

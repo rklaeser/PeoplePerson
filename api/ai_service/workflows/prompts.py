@@ -48,7 +48,7 @@ extract_person_data_prompt = ChatPromptTemplate.from_messages([
 Extract the following information if available:
 - name: The person's name (required)
 - body: Any description or notes about the person
-- intent: The relationship category (romantic, core, archive, new, invest, associate)
+- intent: The relationship category (romantic, core, archive, new, develop, casual)
 - birthday: Birthday in YYYY-MM-DD format if mentioned
 - mnemonic: Any memory aid or nickname mentioned
 

@@ -18,7 +18,7 @@ const friendsData = JSON.parse(
 
 // Map JSON intent values to database enum values
 const intentMapping = {
-	Develop: 'invest',
+	Develop: 'develop',
 	Core: 'core',
 	Past: 'archive',
 	Hold: 'archive'

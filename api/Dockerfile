@@ -17,4 +17,4 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 COPY . .
 
 # Run the application
-CMD ["python", "run_django.py"]
+CMD ["python", "run_fastapi.py"]
