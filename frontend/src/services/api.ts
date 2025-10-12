@@ -1,8 +1,9 @@
 import axios from 'axios'
 import { auth } from '@/config/firebase'
+import { API_BASE_URL } from '@/config/api'
 
 export const apiClient = axios.create({
-  baseURL: 'http://localhost:8000/api',
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
