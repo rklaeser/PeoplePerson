@@ -47,6 +47,7 @@ class User(UserBase, table=True):
     tags: List["Tag"] = Relationship(back_populates="user", cascade_delete=True)
     history_entries: List["History"] = Relationship(back_populates="user", cascade_delete=True)
     entries: List["Entry"] = Relationship(back_populates="user", cascade_delete=True)
+    messages: List["Message"] = Relationship(back_populates="user", cascade_delete=True)
 
 
 class PersonBase(SQLModel):
@@ -57,6 +58,7 @@ class PersonBase(SQLModel):
     mnemonic: Optional[str] = None
     zip: Optional[str] = None
     profile_pic_index: int = Field(default=0)
+    phone_number: Optional[str] = None
 
 
 class Person(PersonBase, table=True):
@@ -82,6 +84,7 @@ class Person(PersonBase, table=True):
         sa_relationship_kwargs={"foreign_keys": "[PersonAssociation.associate_id]"}
     )
     entry_associations: List["EntryPerson"] = Relationship(back_populates="person", cascade_delete=True)
+    messages: List["Message"] = Relationship(back_populates="person", cascade_delete=True)
 
 
 class TagBase(SQLModel):
@@ -245,6 +248,7 @@ class PersonUpdate(SQLModel):
     mnemonic: Optional[str] = None
     zip: Optional[str] = None
     profile_pic_index: Optional[int] = None
+    phone_number: Optional[str] = None
 
 
 class PersonRead(PersonBase):
@@ -304,3 +308,40 @@ class EntryRead(EntryBase):
     user_id: UUID
     created_at: datetime
     updated_at: datetime
+
+
+class MessageDirection(str, Enum):
+    INBOUND = "inbound"
+    OUTBOUND = "outbound"
+
+
+class MessageBase(SQLModel):
+    body: str
+    direction: MessageDirection
+
+
+class Message(MessageBase, table=True):
+    __tablename__ = "messages"
+    
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    person_id: UUID = Field(foreign_key="people.id", sa_column_kwargs={"name": "personId"})
+    user_id: UUID = Field(foreign_key="users.id", sa_column_kwargs={"name": "userId"})
+    created_at: datetime = Field(default_factory=datetime.utcnow, sa_column_kwargs={"name": "createdAt"})
+    updated_at: datetime = Field(default_factory=datetime.utcnow, sa_column_kwargs={"name": "updatedAt"})
+    sent_at: datetime = Field(default_factory=datetime.utcnow, sa_column_kwargs={"name": "sentAt"})
+    
+    person: Person = Relationship(back_populates="messages")
+    user: User = Relationship(back_populates="messages")
+
+
+class MessageCreate(MessageBase):
+    person_id: UUID
+
+
+class MessageRead(MessageBase):
+    id: UUID
+    person_id: UUID
+    user_id: UUID
+    created_at: datetime
+    updated_at: datetime
+    sent_at: datetime

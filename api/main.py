@@ -5,7 +5,9 @@ import os
 from dotenv import load_dotenv
 
 from database import init_db
-from routers import people, groups, history, associations, entries, auth, ai, tags, health
+from routers import people, groups, history, associations, entries, auth, tags, health, sms
+# TODO: Re-enable when migrating to Gemini
+# from routers import ai
 
 load_dotenv()
 
@@ -43,4 +45,6 @@ app.include_router(groups.router, prefix=f"{API_PREFIX}/groups", tags=["groups"]
 app.include_router(history.router, prefix=f"{API_PREFIX}/history", tags=["history"])
 app.include_router(associations.router, prefix=f"{API_PREFIX}/associations", tags=["associations"])
 app.include_router(entries.router, prefix=f"{API_PREFIX}/entries", tags=["entries"])
-app.include_router(ai.router, prefix=f"{API_PREFIX}/ai", tags=["ai"])
+app.include_router(sms.router, prefix=f"{API_PREFIX}", tags=["sms"])
+# TODO: Re-enable when migrating to Gemini
+# app.include_router(ai.router, prefix=f"{API_PREFIX}/ai", tags=["ai"])

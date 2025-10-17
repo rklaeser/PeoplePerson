@@ -19,6 +19,7 @@ export interface Person {
   mnemonic?: string
   zip?: string
   profile_pic_index: number
+  phone_number?: string
   user_id: string
   created_at: string
   updated_at: string
@@ -32,6 +33,7 @@ export interface PersonCreate {
   mnemonic?: string
   zip?: string
   profile_pic_index?: number
+  phone_number?: string
 }
 
 export interface PersonUpdate {
@@ -42,6 +44,7 @@ export interface PersonUpdate {
   mnemonic?: string
   zip?: string
   profile_pic_index?: number
+  phone_number?: string
 }
 
 export interface Group {
@@ -95,4 +98,20 @@ export interface Entry {
   user_id: string
   created_at: string
   updated_at: string
+}
+
+export interface Message {
+  id: string
+  body: string
+  direction: 'inbound' | 'outbound'
+  person_id: string
+  user_id: string
+  created_at: string
+  updated_at: string
+  sent_at: string
+}
+
+export interface MessageCreate {
+  body: string
+  person_id: string
 }

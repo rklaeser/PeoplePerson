@@ -4,6 +4,8 @@ import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 import MainLayout from '@/layouts/MainLayout'
 import Home from '@/pages/Home'
 import PeopleList from '@/pages/People/PeopleList'
+import PersonDetail from '@/pages/People/PersonDetail'
+import PersonForm from '@/pages/People/PersonForm'
 import FirebaseAuth from '@/components/FirebaseAuth'
 
 function AppContent() {
@@ -26,6 +28,8 @@ function AppContent() {
       <Route path="/" element={<MainLayout />}>
         <Route index element={<Home />} />
         <Route path="people" element={<PeopleList />} />
+        <Route path="people/new" element={<PersonForm />} />
+        <Route path="people/:id" element={<PersonDetail />} />
         <Route path="groups" element={<div>Groups - Coming Soon</div>} />
         <Route path="tags" element={<div>Tags - Coming Soon</div>} />
       </Route>

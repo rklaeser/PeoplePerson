@@ -20,7 +20,7 @@ security = HTTPBearer()
 if not firebase_admin._apps:
     # Check if using Firebase emulator
     emulator_host = os.getenv("FIREBASE_AUTH_EMULATOR_HOST")
-    project_id = os.getenv("FIREBASE_PROJECT_ID", "peopleperson-d189e")
+    project_id = os.getenv("FIREBASE_PROJECT_ID", "peopleperson-app")
     
     if emulator_host:
         # For emulator, initialize with project ID

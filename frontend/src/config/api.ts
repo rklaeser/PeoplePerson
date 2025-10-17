@@ -3,7 +3,9 @@
 const getApiUrl = (environment: string | undefined): string => {
   switch(environment) {
     case 'production':
-      return 'https://peopleperson-api-1076925812481.us-central1.run.app/api';
+      return 'https://api.peopleperson.reedklaeser.com';
+    case 'staging':
+      return 'https://api.staging.peopleperson.reedklaeser.com';
     case 'development':
     default:
       return 'http://localhost:8000/api';
