@@ -4,10 +4,10 @@
 substitutions:
   _PROJECT_ID: peopleperson-app
 
-# options:
-#   logging: CLOUD_LOGGING_ONLY
-#   logStreamingOption: STREAM_ON
-#   machineType: 'E2_HIGHCPU_8'
+options:
+  logging: CLOUD_LOGGING_ONLY
+  logStreamingOption: STREAM_ON
+  machineType: 'E2_HIGHCPU_8'
 
 steps:
   # Build Docker images
