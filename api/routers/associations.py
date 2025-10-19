@@ -4,7 +4,7 @@ from typing import List
 from uuid import UUID
 
 from database import get_db
-from models import PersonAssociation, GroupAssociation, Person
+from models import PersonAssociation, Person
 from routers.auth import get_current_user_id
 
 router = APIRouter()
@@ -86,25 +86,12 @@ async def delete_person_association(
     association = db.get(PersonAssociation, association_id)
     if not association:
         raise HTTPException(status_code=404, detail="Association not found")
-    
+
     # Verify the association belongs to user's people
     person = db.get(Person, association.person_id)
     if not person or person.user_id != user_id:
         raise HTTPException(status_code=403, detail="Not authorized")
-    
+
     db.delete(association)
     db.commit()
     return {"detail": "Association deleted successfully"}
-
-
-@router.get("/groups/associations")
-async def get_group_associations(
-    db: Session = Depends(get_db),
-    user_id: UUID = Depends(get_current_user_id),
-    skip: int = 0,
-    limit: int = 100
-):
-    query = select(GroupAssociation).where(GroupAssociation.user_id == user_id)
-    query = query.offset(skip).limit(limit)
-    associations = db.exec(query).all()
-    return associations

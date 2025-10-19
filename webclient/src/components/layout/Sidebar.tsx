@@ -2,10 +2,10 @@ import { useUIStore } from '@/stores/ui-store'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { Users, Settings, Menu, MessageSquare, LogOut } from 'lucide-react'
+import { Users, Settings, Menu, MessageSquare, LogOut, Sparkles } from 'lucide-react'
 
 export function Sidebar() {
-  const { sidebarCollapsed, toggleSidebar } = useUIStore()
+  const { sidebarCollapsed, toggleSidebar, toggleChatPanel } = useUIStore()
   const { user, logout } = useAuth()
 
   return (
@@ -46,6 +46,12 @@ export function Sidebar() {
             icon={<MessageSquare size={20} />}
             label="Messages"
             collapsed={sidebarCollapsed}
+          />
+          <SidebarItem
+            icon={<Sparkles size={20} />}
+            label="Add Contacts"
+            collapsed={sidebarCollapsed}
+            onClick={toggleChatPanel}
           />
           <SidebarItem
             icon={<Settings size={20} />}

@@ -7,7 +7,6 @@ from pydantic import field_validator
 
 
 class IntentChoices(str, Enum):
-    ROMANTIC = "romantic"
     CORE = "core"
     ARCHIVE = "archive"
     NEW = "new"
@@ -43,22 +42,23 @@ class User(UserBase, table=True):
     updated_at: datetime = Field(default_factory=datetime.utcnow, sa_column_kwargs={"name": "updatedAt"})
     
     people: List["Person"] = Relationship(back_populates="user", cascade_delete=True)
-    groups: List["Group"] = Relationship(back_populates="user", cascade_delete=True)
     tags: List["Tag"] = Relationship(back_populates="user", cascade_delete=True)
     history_entries: List["History"] = Relationship(back_populates="user", cascade_delete=True)
     entries: List["Entry"] = Relationship(back_populates="user", cascade_delete=True)
     messages: List["Message"] = Relationship(back_populates="user", cascade_delete=True)
+    notebook_entries: List["NotebookEntry"] = Relationship(back_populates="user", cascade_delete=True)
 
 
 class PersonBase(SQLModel):
     name: str
     body: str = Field(default="Add a description")
-    intent: IntentChoices = Field(default=IntentChoices.NEW)
     birthday: Optional[str] = None
     mnemonic: Optional[str] = None
     zip: Optional[str] = None
     profile_pic_index: int = Field(default=0)
+    email: Optional[str] = None
     phone_number: Optional[str] = None
+    last_contact_date: datetime = Field(default_factory=datetime.utcnow)
 
 
 class Person(PersonBase, table=True):
@@ -71,7 +71,6 @@ class Person(PersonBase, table=True):
     
     user: User = Relationship(back_populates="people")
     history_entries: List["History"] = Relationship(back_populates="person", cascade_delete=True)
-    group_associations: List["GroupAssociation"] = Relationship(back_populates="person", cascade_delete=True)
     person_tags: List["PersonTag"] = Relationship(back_populates="person", cascade_delete=True)
     person_associations_from: List["PersonAssociation"] = Relationship(
         back_populates="person",
@@ -85,6 +84,7 @@ class Person(PersonBase, table=True):
     )
     entry_associations: List["EntryPerson"] = Relationship(back_populates="person", cascade_delete=True)
     messages: List["Message"] = Relationship(back_populates="person", cascade_delete=True)
+    notebook_entries: List["NotebookEntry"] = Relationship(back_populates="person", cascade_delete=True)
 
 
 class TagBase(SQLModel):
@@ -111,24 +111,6 @@ class Tag(TagBase, table=True):
     
     user: User = Relationship(back_populates="tags")
     person_tags: List["PersonTag"] = Relationship(back_populates="tag", cascade_delete=True)
-
-
-# Keep Group model for backward compatibility during migration
-class GroupBase(SQLModel):
-    name: str
-    description: Optional[str] = None
-
-
-class Group(GroupBase, table=True):
-    __tablename__ = "groups"
-    
-    id: UUID = Field(default_factory=uuid4, primary_key=True)
-    user_id: UUID = Field(foreign_key="users.id", sa_column_kwargs={"name": "userId"})
-    created_at: datetime = Field(default_factory=datetime.utcnow, sa_column_kwargs={"name": "createdAt"})
-    updated_at: datetime = Field(default_factory=datetime.utcnow, sa_column_kwargs={"name": "updatedAt"})
-    
-    user: User = Relationship(back_populates="groups")
-    group_associations: List["GroupAssociation"] = Relationship(back_populates="group", cascade_delete=True)
 
 
 class HistoryBase(SQLModel):
@@ -160,20 +142,6 @@ class PersonTag(SQLModel, table=True):
     
     person: Person = Relationship(back_populates="person_tags")
     tag: Tag = Relationship(back_populates="person_tags")
-
-
-# Keep GroupAssociation for backward compatibility during migration
-class GroupAssociation(SQLModel, table=True):
-    __tablename__ = "groupAssociations"
-    
-    person_id: UUID = Field(foreign_key="people.id", primary_key=True, sa_column_kwargs={"name": "personId"})
-    group_id: UUID = Field(foreign_key="groups.id", primary_key=True, sa_column_kwargs={"name": "groupId"})
-    user_id: UUID = Field(foreign_key="users.id", sa_column_kwargs={"name": "userId"})
-    created_at: datetime = Field(default_factory=datetime.utcnow, sa_column_kwargs={"name": "createdAt"})
-    updated_at: datetime = Field(default_factory=datetime.utcnow, sa_column_kwargs={"name": "updatedAt"})
-    
-    person: Person = Relationship(back_populates="group_associations")
-    group: Group = Relationship(back_populates="group_associations")
 
 
 class PersonAssociation(SQLModel, table=True):
@@ -243,12 +211,13 @@ class PersonCreate(PersonBase):
 class PersonUpdate(SQLModel):
     name: Optional[str] = None
     body: Optional[str] = None
-    intent: Optional[IntentChoices] = None
     birthday: Optional[str] = None
     mnemonic: Optional[str] = None
     zip: Optional[str] = None
     profile_pic_index: Optional[int] = None
+    email: Optional[str] = None
     phone_number: Optional[str] = None
+    last_contact_date: Optional[datetime] = None
 
 
 class PersonRead(PersonBase):
@@ -256,10 +225,14 @@ class PersonRead(PersonBase):
     user_id: UUID
     created_at: datetime
     updated_at: datetime
+    latest_notebook_entry_content: Optional[str] = None
+    latest_notebook_entry_time: Optional[datetime] = None
 
-
-class GroupCreate(GroupBase):
-    pass
+    # Computed health score fields
+    health_score: int = 0
+    health_status: str = "healthy"
+    health_emoji: str = "🌳"
+    days_since_contact: int = 0
 
 
 class TagCreate(TagBase):
@@ -274,13 +247,6 @@ class TagUpdate(SQLModel):
 
 
 class TagRead(TagBase):
-    id: UUID
-    user_id: UUID
-    created_at: datetime
-    updated_at: datetime
-
-
-class GroupRead(GroupBase):
     id: UUID
     user_id: UUID
     created_at: datetime
@@ -338,6 +304,11 @@ class MessageCreate(MessageBase):
     person_id: UUID
 
 
+class SMSSendRequest(SQLModel):
+    person_id: UUID
+    body: str
+
+
 class MessageRead(MessageBase):
     id: UUID
     person_id: UUID
@@ -345,3 +316,38 @@ class MessageRead(MessageBase):
     created_at: datetime
     updated_at: datetime
     sent_at: datetime
+
+
+# Notebook Entries
+class NotebookEntryBase(SQLModel):
+    entry_date: str  # YYYY-MM-DD format (immutable after creation)
+    content: str
+
+
+class NotebookEntry(NotebookEntryBase, table=True):
+    __tablename__ = "notebookEntries"
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    person_id: UUID = Field(foreign_key="people.id", sa_column_kwargs={"name": "personId"})
+    user_id: UUID = Field(foreign_key="users.id", sa_column_kwargs={"name": "userId"})
+    created_at: datetime = Field(default_factory=datetime.utcnow, sa_column_kwargs={"name": "createdAt"})
+    updated_at: datetime = Field(default_factory=datetime.utcnow, sa_column_kwargs={"name": "updatedAt"})
+
+    person: "Person" = Relationship(back_populates="notebook_entries")
+    user: "User" = Relationship(back_populates="notebook_entries")
+
+
+class NotebookEntryCreate(NotebookEntryBase):
+    pass
+
+
+class NotebookEntryUpdate(SQLModel):
+    content: Optional[str] = None  # Only content is editable, date is immutable
+
+
+class NotebookEntryRead(NotebookEntryBase):
+    id: UUID
+    person_id: UUID
+    user_id: UUID
+    created_at: datetime
+    updated_at: datetime

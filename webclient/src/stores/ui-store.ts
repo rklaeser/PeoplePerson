@@ -26,6 +26,20 @@ export interface UIStore {
   // Mobile responsive
   mobileMenuOpen: boolean
   setMobileMenuOpen: (open: boolean) => void
+
+  // Chat panel state
+  chatPanelOpen: boolean
+  setChatPanelOpen: (open: boolean) => void
+  toggleChatPanel: () => void
+
+  // Hamburger menu state
+  hamburgerMenuOpen: boolean
+  setHamburgerMenuOpen: (open: boolean) => void
+  toggleHamburgerMenu: () => void
+
+  // View mode state
+  viewMode: 'list' | 'table'
+  setViewMode: (mode: 'list' | 'table') => void
 }
 
 export const useUIStore = create<UIStore>()(
@@ -55,6 +69,20 @@ export const useUIStore = create<UIStore>()(
       // Mobile responsive
       mobileMenuOpen: false,
       setMobileMenuOpen: (open) => set({ mobileMenuOpen: open }),
+
+      // Chat panel state
+      chatPanelOpen: false,
+      setChatPanelOpen: (open) => set({ chatPanelOpen: open }),
+      toggleChatPanel: () => set({ chatPanelOpen: !get().chatPanelOpen }),
+
+      // Hamburger menu state
+      hamburgerMenuOpen: false,
+      setHamburgerMenuOpen: (open) => set({ hamburgerMenuOpen: open }),
+      toggleHamburgerMenu: () => set({ hamburgerMenuOpen: !get().hamburgerMenuOpen }),
+
+      // View mode state
+      viewMode: 'list',
+      setViewMode: (mode) => set({ viewMode: mode }),
     }),
     {
       name: 'peopleperson-ui-store',
@@ -64,6 +92,7 @@ export const useUIStore = create<UIStore>()(
         rightPanelWidth: state.rightPanelWidth,
         theme: state.theme,
         composerExpanded: state.composerExpanded,
+        viewMode: state.viewMode,
       }),
     }
   )

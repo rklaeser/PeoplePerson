@@ -1,20 +1,19 @@
 import { useUIStore } from '@/stores/ui-store'
-import { cn } from '@/lib/utils'
-import { Sidebar } from './Sidebar'
 import { PeopleList } from './PeopleList'
 import { PersonPanel } from './PersonPanel'
+import { ChatPanel } from './ChatPanel'
 
 export function AppLayout() {
-  const { sidebarCollapsed } = useUIStore()
+  const { chatPanelOpen, setChatPanelOpen, viewMode } = useUIStore()
 
   return (
-    <div className={cn(
-      "app-layout",
-      sidebarCollapsed && "sidebar-collapsed"
-    )}>
-      <Sidebar />
+    <div className={viewMode === 'table' ? 'app-layout-table' : 'app-layout'}>
       <PeopleList />
-      <PersonPanel />
+      {viewMode === 'list' && <PersonPanel />}
+      <ChatPanel
+        isOpen={chatPanelOpen}
+        onClose={() => setChatPanelOpen(false)}
+      />
     </div>
   )
 }

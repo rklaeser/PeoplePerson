@@ -14,52 +14,49 @@ export interface Person {
   id: string
   name: string
   body: string
-  intent: 'romantic' | 'core' | 'archive' | 'new' | 'invest' | 'associate'
   birthday?: string
   mnemonic?: string
   zip?: string
   profile_pic_index: number
+  email?: string
   phone_number?: string
+  last_contact_date: string
   user_id: string
   created_at: string
   updated_at: string
   last_message?: string // For list display
+  latest_notebook_entry_content?: string
+  latest_notebook_entry_time?: string
+
+  // Computed health score fields
+  health_score: number
+  health_status: 'healthy' | 'warning' | 'dormant'
+  health_emoji: string
+  days_since_contact: number
 }
 
 export interface PersonCreate {
   name: string
   body?: string
-  intent?: 'romantic' | 'core' | 'archive' | 'new' | 'invest' | 'associate'
   birthday?: string
   mnemonic?: string
   zip?: string
   profile_pic_index?: number
+  email?: string
   phone_number?: string
+  last_contact_date?: string
 }
 
 export interface PersonUpdate {
   name?: string
   body?: string
-  intent?: 'romantic' | 'core' | 'archive' | 'new' | 'invest' | 'associate'
   birthday?: string
   mnemonic?: string
   zip?: string
   profile_pic_index?: number
+  email?: string
   phone_number?: string
-}
-
-export interface Group {
-  id: string
-  name: string
-  description?: string
-  user_id: string
-  created_at: string
-  updated_at: string
-}
-
-export interface GroupCreate {
-  name: string
-  description?: string
+  last_contact_date?: string
 }
 
 export interface Tag {
@@ -75,6 +72,13 @@ export interface Tag {
 
 export interface TagCreate {
   name: string
+  category?: string
+  color?: string
+  description?: string
+}
+
+export interface TagUpdate {
+  name?: string
   category?: string
   color?: string
   description?: string
@@ -118,7 +122,61 @@ export interface MessageCreate {
   person_id: string
 }
 
+// Notebook Entry types
+export interface NotebookEntry {
+  id: string
+  person_id: string
+  user_id: string
+  entry_date: string  // YYYY-MM-DD format (immutable after creation)
+  content: string
+  created_at: string
+  updated_at: string
+}
+
+export interface NotebookEntryCreate {
+  entry_date: string  // YYYY-MM-DD
+  content: string
+}
+
+export interface NotebookEntryUpdate {
+  content: string  // Only content is editable
+}
+
 // Search and filter types
-export type PersonFilter = 'all' | 'unread' | 'important'
-export type PersonSort = 'recent' | 'name' | 'intent'
+export type PersonFilter = 'all' | 'needs-attention' | 'healthy' | 'dormant'
+export type PersonSort = 'recent' | 'name' | 'health'
 export type PanelType = 'messages' | 'profile' | 'activity'
+
+// AI extraction types
+export interface PersonExtraction {
+  name: string
+  attributes?: string
+  email?: string
+  phone_number?: string
+}
+
+export interface DuplicateWarning {
+  extraction: PersonExtraction
+  existing_id: string
+  existing_name: string
+  existing_notes?: string
+  similarity: number
+}
+
+export interface ExtractionResponse {
+  intent: 'create' | 'read' | 'update' | 'none'
+  message?: string
+  people?: PersonExtraction[]
+  duplicates?: DuplicateWarning[]
+  created_persons?: Person[]  // Actual Person objects created by the backend
+}
+
+export interface NarrativeRequest {
+  narrative: string
+}
+
+export interface ConfirmPersonRequest {
+  extraction: PersonExtraction
+  action: 'create_new' | 'link_existing'
+  existing_id?: string
+}

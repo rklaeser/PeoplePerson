@@ -2,12 +2,44 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlmodel import Session, select, or_, func
 from typing import List, Optional
 from uuid import UUID
+from datetime import datetime
 
 from database import get_db
-from models import Person, PersonCreate, PersonRead, PersonUpdate, GroupAssociation, Group, GroupRead, History, HistoryCreate, Tag, TagRead, PersonTag
+from models import Person, PersonCreate, PersonRead, PersonUpdate, History, HistoryCreate, Tag, TagRead, PersonTag, NotebookEntry
 from routers.auth import get_current_user_id
+from services.health_score import calculate_health_score, get_health_status, get_health_emoji
 
 router = APIRouter()
+
+
+def enrich_person_with_health(person: Person, db: Session) -> PersonRead:
+    """
+    Enrich a Person object with computed health score fields
+    """
+    # Calculate health score
+    health_score = calculate_health_score(person.last_contact_date)
+    health_status = get_health_status(health_score)
+    health_emoji = get_health_emoji(health_status)
+    days_since_contact = (datetime.utcnow() - person.last_contact_date).days
+
+    # Get latest notebook entry
+    latest_entry_query = select(NotebookEntry).where(
+        NotebookEntry.person_id == person.id
+    ).order_by(NotebookEntry.created_at.desc()).limit(1)
+    latest_entry = db.exec(latest_entry_query).first()
+
+    # Build PersonRead dict
+    person_dict = person.model_dump()
+    person_dict['health_score'] = health_score
+    person_dict['health_status'] = health_status
+    person_dict['health_emoji'] = health_emoji
+    person_dict['days_since_contact'] = days_since_contact
+
+    if latest_entry:
+        person_dict['latest_notebook_entry_content'] = latest_entry.content
+        person_dict['latest_notebook_entry_time'] = latest_entry.created_at
+
+    return PersonRead(**person_dict)
 
 
 @router.get("/", response_model=List[PersonRead])
@@ -20,7 +52,7 @@ async def get_people(
 ):
     print(f"DEBUG: get_people endpoint reached with user_id: {user_id}")
     query = select(Person).where(Person.user_id == user_id)
-    
+
     if search:
         query = query.where(
             or_(
@@ -29,10 +61,13 @@ async def get_people(
                 Person.mnemonic.contains(search)
             )
         )
-    
+
     query = query.offset(skip).limit(limit).order_by(Person.name)
     people = db.exec(query).all()
-    return people
+
+    # Enrich each person with health scores and notebook entries
+    result = [enrich_person_with_health(person, db) for person in people]
+    return result
 
 
 @router.post("/", response_model=PersonRead)
@@ -45,7 +80,7 @@ async def create_person(
     db.add(db_person)
     db.commit()
     db.refresh(db_person)
-    return db_person
+    return enrich_person_with_health(db_person, db)
 
 
 @router.get("/{person_id}", response_model=PersonRead)
@@ -57,7 +92,7 @@ async def get_person(
     person = db.get(Person, person_id)
     if not person or person.user_id != user_id:
         raise HTTPException(status_code=404, detail="Person not found")
-    return person
+    return enrich_person_with_health(person, db)
 
 
 @router.patch("/{person_id}", response_model=PersonRead)
@@ -70,15 +105,15 @@ async def update_person(
     person = db.get(Person, person_id)
     if not person or person.user_id != user_id:
         raise HTTPException(status_code=404, detail="Person not found")
-    
+
     person_data = person_update.model_dump(exclude_unset=True)
     for key, value in person_data.items():
         setattr(person, key, value)
-    
+
     db.add(person)
     db.commit()
     db.refresh(person)
-    return person
+    return enrich_person_with_health(person, db)
 
 
 @router.delete("/{person_id}")
@@ -90,94 +125,37 @@ async def delete_person(
     person = db.get(Person, person_id)
     if not person or person.user_id != user_id:
         raise HTTPException(status_code=404, detail="Person not found")
-    
+
     db.delete(person)
     db.commit()
     return Response(status_code=204)
 
 
-@router.get("/{person_id}/groups", response_model=List[GroupRead])
-async def get_person_groups(
+@router.post("/{person_id}/contact")
+async def mark_as_contacted(
     person_id: UUID,
     db: Session = Depends(get_db),
     user_id: UUID = Depends(get_current_user_id)
 ):
+    """Manually mark that you contacted this person (updates health score)"""
     person = db.get(Person, person_id)
     if not person or person.user_id != user_id:
         raise HTTPException(status_code=404, detail="Person not found")
-    
-    query = select(Group).join(GroupAssociation).where(
-        GroupAssociation.person_id == person_id,
-        GroupAssociation.user_id == user_id
-    )
-    groups = db.exec(query).all()
-    return groups
 
-
-@router.post("/{person_id}/groups")
-async def add_person_to_group(
-    person_id: UUID,
-    request: dict,
-    db: Session = Depends(get_db),
-    user_id: UUID = Depends(get_current_user_id)
-):
-    person = db.get(Person, person_id)
-    if not person or person.user_id != user_id:
-        raise HTTPException(status_code=404, detail="Person not found")
-    
-    group_id = UUID(request["group_id"])
-    group = db.get(Group, group_id)
-    
-    if not group or group.user_id != user_id:
-        raise HTTPException(status_code=404, detail="Group not found")
-    
-    # Check if association already exists
-    query = select(GroupAssociation).where(
-        GroupAssociation.person_id == person_id,
-        GroupAssociation.group_id == group_id
-    )
-    existing = db.exec(query).first()
-    
-    if existing:
-        return {"message": f"{person.name} already in {group.name}"}
-    
-    # Create association
-    association = GroupAssociation(
-        person_id=person_id,
-        group_id=group_id,
-        user_id=user_id
-    )
-    db.add(association)
+    # Update last contact date
+    person.last_contact_date = datetime.utcnow()
+    db.add(person)
     db.commit()
-    
-    return {"message": "Person added to group"}
+    db.refresh(person)
 
+    # Calculate new health score
+    health_score = calculate_health_score(person.last_contact_date)
 
-@router.delete("/{person_id}/groups/{group_id}")
-async def remove_person_from_group(
-    person_id: UUID,
-    group_id: UUID,
-    db: Session = Depends(get_db),
-    user_id: UUID = Depends(get_current_user_id)
-):
-    person = db.get(Person, person_id)
-    if not person or person.user_id != user_id:
-        raise HTTPException(status_code=404, detail="Person not found")
-    
-    query = select(GroupAssociation).where(
-        GroupAssociation.person_id == person_id,
-        GroupAssociation.group_id == group_id,
-        GroupAssociation.user_id == user_id
-    )
-    association = db.exec(query).first()
-    
-    if not association:
-        raise HTTPException(status_code=404, detail="Association not found")
-    
-    db.delete(association)
-    db.commit()
-    
-    return Response(status_code=204)
+    return {
+        "message": "Contact logged",
+        "health_score": health_score,
+        "last_contact_date": person.last_contact_date
+    }
 
 
 @router.get("/search", response_model=List[PersonRead])
@@ -188,7 +166,7 @@ async def search_people(
 ):
     if not query:
         raise HTTPException(status_code=400, detail="Query parameter is required")
-    
+
     statement = select(Person).where(
         Person.user_id == user_id,
         or_(
@@ -198,7 +176,7 @@ async def search_people(
         )
     )
     people = db.exec(statement).all()
-    return people
+    return [enrich_person_with_health(person, db) for person in people]
 
 
 # Tag-related endpoints for people
@@ -318,13 +296,13 @@ async def get_people_by_tag(
     tag = db.get(Tag, tag_id)
     if not tag or tag.user_id != user_id:
         raise HTTPException(status_code=404, detail="Tag not found")
-    
+
     query = select(Person).join(PersonTag).where(
         PersonTag.tag_id == tag_id,
         Person.user_id == user_id
     )
     people = db.exec(query).all()
-    return people
+    return [enrich_person_with_health(person, db) for person in people]
 
 
 @router.get("/by-tags/", response_model=List[PersonRead])
@@ -337,24 +315,24 @@ async def get_people_by_tags(
 ):
     """Get people by multiple tags"""
     tag_names = [name.strip() for name in tags.split(",") if name.strip()]
-    
+
     if not tag_names:
         raise HTTPException(status_code=400, detail="At least one tag name is required")
-    
+
     # Get tag IDs
     tag_query = select(Tag.id).where(
         Tag.user_id == user_id,
         Tag.name.in_(tag_names)
     )
-    
+
     if category:
         tag_query = tag_query.where(Tag.category == category)
-    
+
     tag_ids = db.exec(tag_query).all()
-    
+
     if not tag_ids:
         return []
-    
+
     if match_all:
         # AND logic: person must have ALL specified tags
         query = select(Person).where(
@@ -372,6 +350,6 @@ async def get_people_by_tags(
             PersonTag.tag_id.in_(tag_ids),
             Person.user_id == user_id
         ).distinct()
-    
+
     people = db.exec(query).all()
-    return people
+    return [enrich_person_with_health(person, db) for person in people]

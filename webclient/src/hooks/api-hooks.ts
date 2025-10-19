@@ -1,14 +1,29 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api-client'
-import { Person, PersonCreate, PersonUpdate, MessageCreate } from '@/types/api'
+import {
+  Person,
+  PersonCreate,
+  PersonUpdate,
+  MessageCreate,
+  NarrativeRequest,
+  ConfirmPersonRequest,
+  NotebookEntryCreate,
+  NotebookEntryUpdate,
+  TagCreate,
+  TagUpdate
+} from '@/types/api'
 
 // Query keys
 export const queryKeys = {
   currentUser: ['user', 'current'] as const,
-  people: (params?: { filter?: string; sort?: string; search?: string }) => 
+  people: (params?: { filter?: string; sort?: string; search?: string }) =>
     ['people', params] as const,
   person: (id: string) => ['person', id] as const,
   messages: (personId: string) => ['messages', personId] as const,
+  notebookEntries: (personId: string) => ['notebook', personId] as const,
+  tags: (params?: { category?: string; search?: string }) => ['tags', params] as const,
+  tag: (id: string) => ['tag', id] as const,
+  personTags: (personId: string) => ['person-tags', personId] as const,
 }
 
 // User hooks
@@ -73,7 +88,7 @@ export const useUpdatePerson = () => {
 
 export const useDeletePerson = () => {
   const queryClient = useQueryClient()
-  
+
   return useMutation({
     mutationFn: (id: string) => api.deletePerson(id),
     onSuccess: (_, id) => {
@@ -83,6 +98,20 @@ export const useDeletePerson = () => {
       queryClient.invalidateQueries({ queryKey: ['people'] })
       // Remove messages
       queryClient.removeQueries({ queryKey: queryKeys.messages(id) })
+    },
+  })
+}
+
+export const useMarkAsContacted = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (personId: string) => api.markAsContacted(personId),
+    onSuccess: (_, personId) => {
+      // Invalidate person to refetch with new health score
+      queryClient.invalidateQueries({ queryKey: queryKeys.person(personId) })
+      // Invalidate people list to update health scores there too
+      queryClient.invalidateQueries({ queryKey: ['people'] })
     },
   })
 }
@@ -200,13 +229,169 @@ export const useSendSMS = () => {
         queryKeys.messages(personId),
         (old: any) => {
           if (!old) return [newMessage]
-          return old.map((msg: any) => 
+          return old.map((msg: any) =>
             msg.id.startsWith('temp-sms-') ? newMessage : msg
           )
         }
       )
-      
+
       queryClient.invalidateQueries({ queryKey: ['people'] })
+    },
+  })
+}
+
+// Notebook Entry hooks
+export const useNotebookEntries = (personId: string) => {
+  return useQuery({
+    queryKey: queryKeys.notebookEntries(personId),
+    queryFn: () => api.getNotebookEntries(personId),
+    enabled: !!personId,
+    staleTime: 30 * 1000, // 30 seconds
+  })
+}
+
+export const useCreateNotebookEntry = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ personId, data }: { personId: string; data: NotebookEntryCreate }) =>
+      api.createNotebookEntry(personId, data),
+    onSuccess: (_, { personId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.notebookEntries(personId) })
+    },
+  })
+}
+
+export const useUpdateNotebookEntry = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ personId, entryId, data }: { personId: string; entryId: string; data: NotebookEntryUpdate }) =>
+      api.updateNotebookEntry(personId, entryId, data),
+    onSuccess: (_, { personId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.notebookEntries(personId) })
+    },
+  })
+}
+
+export const useDeleteNotebookEntry = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ personId, entryId }: { personId: string; entryId: string }) =>
+      api.deleteNotebookEntry(personId, entryId),
+    onSuccess: (_, { personId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.notebookEntries(personId) })
+    },
+  })
+}
+
+// AI Extraction hooks
+export const useExtractPeople = () => {
+  return useMutation({
+    mutationFn: (data: NarrativeRequest) => api.extractPeople(data),
+  })
+}
+
+export const useConfirmPerson = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: ConfirmPersonRequest) => api.confirmPerson(data),
+    onSuccess: (newPerson) => {
+      // Invalidate people list to show new person
+      queryClient.invalidateQueries({ queryKey: ['people'] })
+      // Add to cache
+      queryClient.setQueryData(queryKeys.person(newPerson.id), newPerson)
+    },
+  })
+}
+
+// Tag hooks
+export const useTags = (params?: { category?: string; search?: string }) => {
+  return useQuery({
+    queryKey: queryKeys.tags(params),
+    queryFn: () => api.getTags(params),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  })
+}
+
+export const useTag = (id: string) => {
+  return useQuery({
+    queryKey: queryKeys.tag(id),
+    queryFn: () => api.getTag(id),
+    enabled: !!id,
+    staleTime: 5 * 60 * 1000,
+  })
+}
+
+export const useCreateTag = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: TagCreate) => api.createTag(data),
+    onSuccess: (newTag) => {
+      queryClient.invalidateQueries({ queryKey: ['tags'] })
+      queryClient.setQueryData(queryKeys.tag(newTag.id), newTag)
+    },
+  })
+}
+
+export const useUpdateTag = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: TagUpdate }) => api.updateTag(id, data),
+    onSuccess: (updatedTag, { id }) => {
+      queryClient.setQueryData(queryKeys.tag(id), updatedTag)
+      queryClient.invalidateQueries({ queryKey: ['tags'] })
+    },
+  })
+}
+
+export const useDeleteTag = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: string) => api.deleteTag(id),
+    onSuccess: (_, id) => {
+      queryClient.removeQueries({ queryKey: queryKeys.tag(id) })
+      queryClient.invalidateQueries({ queryKey: ['tags'] })
+    },
+  })
+}
+
+// Person-Tag association hooks
+export const usePersonTags = (personId: string) => {
+  return useQuery({
+    queryKey: queryKeys.personTags(personId),
+    queryFn: () => api.getPersonTags(personId),
+    enabled: !!personId,
+    staleTime: 30 * 1000, // 30 seconds
+  })
+}
+
+export const useAddTagToPerson = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ personId, tagData }: { personId: string; tagData: { name: string; category?: string; color?: string } }) =>
+      api.addTagToPerson(personId, tagData),
+    onSuccess: (_, { personId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.personTags(personId) })
+      queryClient.invalidateQueries({ queryKey: ['tags'] })
+    },
+  })
+}
+
+export const useRemoveTagFromPerson = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ personId, tagId }: { personId: string; tagId: string }) =>
+      api.removeTagFromPerson(personId, tagId),
+    onSuccess: (_, { personId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.personTags(personId) })
     },
   })
 }

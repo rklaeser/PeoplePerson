@@ -2,17 +2,23 @@ import { useParams, useSearch, useNavigate, useLocation } from '@tanstack/react-
 import { usePerson } from '@/hooks/api-hooks'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { MessageSquare, User, Activity } from 'lucide-react'
+import { MessageSquare, User, Activity, Sparkles } from 'lucide-react'
 import { MessageThread } from './MessageThread'
 import { PersonProfile } from './PersonProfile'
 import { PersonActivity } from './PersonActivity'
+import { useUIStore } from '@/stores/ui-store'
 
 export function PersonPanel() {
   const location = useLocation()
   const navigate = useNavigate()
-  
+  const { personId } = useParams({ from: '/people/$personId' })
+  const search = useSearch({ from: '/people/$personId' }) || { panel: 'messages' }
+  const { toggleChatPanel } = useUIStore()
+
   // Check if we're on a person route
   const isPersonRoute = location.pathname.startsWith('/people/') && location.pathname !== '/people'
+
+  const { data: person, isLoading } = usePerson(personId || '')
   
   if (!isPersonRoute) {
     return (
@@ -32,11 +38,6 @@ export function PersonPanel() {
       </main>
     )
   }
-
-  const { personId } = useParams({ from: '/people/$personId' })
-  const search = useSearch({ from: '/people/$personId' }) || { panel: 'messages' }
-  
-  const { data: person, isLoading } = usePerson(personId || '')
 
   if (!personId) {
     return (
@@ -86,8 +87,17 @@ export function PersonPanel() {
       {/* Header with tabs */}
       <div className="border-b border-border bg-card">
         <div className="p-4">
-          <h2 className="text-lg font-semibold mb-3">{person.name}</h2>
-          
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-semibold">{person.name}</h2>
+            <button
+              onClick={toggleChatPanel}
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            >
+              <Sparkles size={18} />
+              <span className="text-sm font-medium">Chat</span>
+            </button>
+          </div>
+
           {/* Tab navigation */}
           <div className="flex gap-1">
             <TabButton

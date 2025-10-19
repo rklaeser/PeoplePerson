@@ -1,5 +1,4 @@
-import * as React from "react"
-import { cn, getInitials } from "@/lib/utils"
+import avatar from 'animal-avatar-generator'
 
 interface AvatarProps {
   name: string
@@ -7,18 +6,18 @@ interface AvatarProps {
   className?: string
 }
 
-export function Avatar({ name, size = 40, className }: AvatarProps) {
-  const initials = getInitials(name)
-  
+export function Avatar({ name, size = 40, className = '' }: AvatarProps) {
+  const svgString = avatar(name, {
+    size,
+    round: true,
+    blackout: true
+  })
+
   return (
     <div
-      className={cn(
-        "inline-flex items-center justify-center rounded-full bg-muted font-medium text-muted-foreground",
-        className
-      )}
-      style={{ width: size, height: size, fontSize: size * 0.4 }}
-    >
-      {initials}
-    </div>
+      className={`inline-block ${className}`}
+      style={{ width: size, height: size }}
+      dangerouslySetInnerHTML={{ __html: svgString }}
+    />
   )
 }

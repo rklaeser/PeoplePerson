@@ -1,115 +1,211 @@
+"""AI-powered contact extraction endpoints."""
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import StreamingResponse
 from sqlmodel import Session
-from typing import AsyncGenerator
+from typing import Optional, List
 from uuid import UUID
-import json
 from pydantic import BaseModel
 
 from database import get_db
 from routers.auth import get_current_user_id
-from ai_service.workflows.graph import create_person_workflow
-from ai_service.workflows.state import PersonState
+from ai.extractor import (
+    PersonExtractor,
+    PersonManager,
+    PersonExtraction,
+    ExtractionResponse,
+    DuplicateWarning,
+    CRUDIntent
+)
+from models import PersonRead
 
 router = APIRouter()
 
 
-class AIRequest(BaseModel):
-    content: str
-    context: dict = {}
+class NarrativeRequest(BaseModel):
+    """Request for extracting people from narrative."""
+    narrative: str
 
 
-async def process_ai_stream(
-    content: str,
-    context: dict,
-    user_id: UUID,
-    db: Session
-) -> AsyncGenerator[str, None]:
-    """Process AI request and stream results"""
-    try:
-        # Create the workflow
-        workflow = create_person_workflow()
-        
-        # Initialize state
-        initial_state = PersonState(
-            user_input=content,
-            user_id=str(user_id),
-            context=context
-        )
-        
-        # Process through workflow
-        result = workflow.invoke(initial_state)
-        
-        # Stream results as SSE
-        yield f"data: {json.dumps({'type': 'start', 'message': 'Processing request...'})}\n\n"
-        
-        if result.get("intent"):
-            yield f"data: {json.dumps({'type': 'intent', 'intent': result['intent']})}\n\n"
-        
-        if result.get("confidence"):
-            yield f"data: {json.dumps({'type': 'confidence', 'confidence': result['confidence']})}\n\n"
-        
-        if result.get("identified_person"):
-            yield f"data: {json.dumps({'type': 'person', 'person': result['identified_person']})}\n\n"
-        
-        if result.get("final_action"):
-            yield f"data: {json.dumps({'type': 'action', 'action': result['final_action']})}\n\n"
-        
-        if result.get("response"):
-            yield f"data: {json.dumps({'type': 'response', 'response': result['response']})}\n\n"
-        
-        yield f"data: {json.dumps({'type': 'complete', 'message': 'Processing complete'})}\n\n"
-        
-    except Exception as e:
-        yield f"data: {json.dumps({'type': 'error', 'error': str(e)})}\n\n"
+class ConfirmPersonRequest(BaseModel):
+    """Request for confirming person creation or linking."""
+    extraction: PersonExtraction
+    action: str  # "create_new" or "link_existing"
+    existing_id: Optional[UUID] = None
 
 
-@router.post("/process")
-async def process_ai_request(
-    request: AIRequest,
+@router.post("/extract-people", response_model=ExtractionResponse)
+async def extract_people(
+    request: NarrativeRequest,
     db: Session = Depends(get_db),
     user_id: UUID = Depends(get_current_user_id)
 ):
-    """Process AI request and return streaming response"""
-    return StreamingResponse(
-        process_ai_stream(request.content, request.context, user_id, db),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-        }
-    )
+    """
+    Extract people from narrative text.
+
+    Process flow:
+    1. Detect intent
+    2. If intent != CREATE, return rejection message
+    3. If intent == CREATE, extract people
+    4. Check for duplicates
+    5. Return results or duplicate warnings
+
+    Args:
+        request: Narrative text to extract from
+        db: Database session
+        user_id: Current user ID
+
+    Returns:
+        ExtractionResponse with intent, people, and/or duplicates
+    """
+    try:
+        # Validate input length (prevent abuse)
+        if len(request.narrative) > 1000:
+            raise HTTPException(
+                status_code=400,
+                detail="Narrative too long. Please limit to 1000 characters."
+            )
+
+        if not request.narrative.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="Narrative cannot be empty."
+            )
+
+        # Initialize extractors
+        extractor = PersonExtractor()
+        manager = PersonManager(db)
+
+        # Step 1: Detect intent
+        intent_analysis = extractor.detect_intent(request.narrative)
+
+        # Step 2: If not CREATE intent, return rejection
+        if not intent_analysis.is_create_request:
+            return ExtractionResponse(
+                intent=intent_analysis.intent,
+                message="Hmm, I can't help with that."
+            )
+
+        # Step 3: Extract people
+        people = extractor.extract(request.narrative)
+
+        if not people:
+            return ExtractionResponse(
+                intent=CRUDIntent.NONE,
+                message="I couldn't find any people in that message."
+            )
+
+        # Step 4: Check for duplicates
+        duplicates: List[DuplicateWarning] = []
+
+        for person_extraction in people:
+            similar = manager.find_similar(person_extraction.name, user_id)
+            if similar:
+                existing_person, similarity = similar
+                duplicates.append(DuplicateWarning(
+                    extraction=person_extraction,
+                    existing_id=existing_person.id,
+                    existing_name=existing_person.name,
+                    existing_notes=existing_person.body,
+                    similarity=similarity
+                ))
+
+        # Step 5: Return results
+        if duplicates:
+            return ExtractionResponse(
+                intent=intent_analysis.intent,
+                people=people,
+                duplicates=duplicates
+            )
+        else:
+            # No duplicates - create all people immediately
+            created_people = []
+            for person_extraction in people:
+                person = manager.create_person(person_extraction, user_id)
+                created_people.append(person)
+
+            # Convert Person objects to dicts for JSON serialization
+            created_persons_data = [
+                {
+                    'id': str(p.id),
+                    'name': p.name,
+                    'body': p.body,
+                    'intent': p.intent,
+                    'birthday': p.birthday,
+                    'mnemonic': p.mnemonic,
+                    'zip': p.zip,
+                    'profile_pic_index': p.profile_pic_index,
+                    'email': p.email,
+                    'phone_number': p.phone_number,
+                    'user_id': str(p.user_id),
+                    'created_at': p.created_at.isoformat(),
+                    'updated_at': p.updated_at.isoformat(),
+                }
+                for p in created_people
+            ]
+
+            return ExtractionResponse(
+                intent=intent_analysis.intent,
+                people=people,
+                message=f"Added {len(created_people)} new contact(s)",
+                created_persons=created_persons_data
+            )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error processing narrative: {str(e)}"
+        )
 
 
-@router.post("/process-sync")
-async def process_ai_request_sync(
-    request: AIRequest,
+@router.post("/confirm-person", response_model=PersonRead)
+async def confirm_person(
+    request: ConfirmPersonRequest,
     db: Session = Depends(get_db),
     user_id: UUID = Depends(get_current_user_id)
 ):
-    """Process AI request synchronously"""
+    """
+    Confirm person creation or link to existing.
+
+    Args:
+        request: Confirmation request with extraction and action
+        db: Database session
+        user_id: Current user ID
+
+    Returns:
+        Created or updated Person
+    """
     try:
-        # Create the workflow
-        workflow = create_person_workflow()
-        
-        # Initialize state
-        initial_state = PersonState(
-            user_input=request.content,
-            user_id=str(user_id),
-            context=request.context
-        )
-        
-        # Process through workflow
-        result = workflow.invoke(initial_state)
-        
-        return {
-            "success": True,
-            "intent": result.get("intent"),
-            "confidence": result.get("confidence"),
-            "identified_person": result.get("identified_person"),
-            "final_action": result.get("final_action"),
-            "response": result.get("response")
-        }
-        
+        manager = PersonManager(db)
+
+        if request.action == "create_new":
+            # Create new person
+            person = manager.create_person(request.extraction, user_id)
+            return PersonRead.model_validate(person)
+
+        elif request.action == "link_existing":
+            # Link to existing person
+            if not request.existing_id:
+                raise HTTPException(
+                    status_code=400,
+                    detail="existing_id required for link_existing action"
+                )
+
+            person = manager.link_to_existing(request.extraction, request.existing_id)
+            return PersonRead.model_validate(person)
+
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid action: {request.action}. Must be 'create_new' or 'link_existing'"
+            )
+
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error confirming person: {str(e)}"
+        )

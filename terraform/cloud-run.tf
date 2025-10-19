@@ -7,10 +7,10 @@ resource "google_cloud_run_v2_service" "peopleperson_api" {
   project  = var.project_id
 
   template {
-    service_account = google_service_account.cloud_run_sa.email
-    
+    service_account = local.service_account_email
+
     annotations = {
-      "run.googleapis.com/cloudsql-instances" = google_sql_database_instance.peopleperson_db.connection_name
+      "run.googleapis.com/cloudsql-instances" = local.database_connection_name
     }
     
     containers {
@@ -35,37 +35,37 @@ resource "google_cloud_run_v2_service" "peopleperson_api" {
         name = "DATABASE_URL"
         value_source {
           secret_key_ref {
-            secret  = var.environment == "production" ? google_secret_manager_secret.database_url_production.secret_id : google_secret_manager_secret.database_url_staging.secret_id
+            secret  = var.environment == "production" ? "database-url-production" : "database-url-staging"
             version = "latest"
           }
         }
       }
-      
+
       env {
         name = "TWILIO_ACCOUNT_SID"
         value_source {
           secret_key_ref {
-            secret  = google_secret_manager_secret.twilio_account_sid.secret_id
+            secret  = "twilio-account-sid"
             version = "latest"
           }
         }
       }
-      
+
       env {
         name = "TWILIO_AUTH_TOKEN"
         value_source {
           secret_key_ref {
-            secret  = google_secret_manager_secret.twilio_auth_token.secret_id
+            secret  = "twilio-auth-token"
             version = "latest"
           }
         }
       }
-      
+
       env {
         name = "TWILIO_PHONE_NUMBER"
         value_source {
           secret_key_ref {
-            secret  = google_secret_manager_secret.twilio_phone_number.secret_id
+            secret  = "twilio-phone-number"
             version = "latest"
           }
         }
@@ -115,11 +115,6 @@ resource "google_cloud_run_v2_service" "peopleperson_api" {
     percent = 100
   }
 
-  depends_on = [
-    google_project_service.required_apis,
-    google_secret_manager_secret.database_url_production,
-    google_secret_manager_secret.database_url_staging,
-  ]
 }
 
 # Cloud Run Frontend Service
@@ -129,8 +124,8 @@ resource "google_cloud_run_v2_service" "peopleperson_frontend" {
   project  = var.project_id
 
   template {
-    service_account = google_service_account.cloud_run_sa.email
-    
+    service_account = local.service_account_email
+
     containers {
       image = "gcr.io/${var.project_id}/peopleperson-frontend:${var.image_tag}"
       
@@ -167,7 +162,6 @@ resource "google_cloud_run_v2_service" "peopleperson_frontend" {
     percent = 100
   }
 
-  depends_on = [google_project_service.required_apis]
 }
 
 # IAM Policy to allow public access to services

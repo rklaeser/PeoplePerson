@@ -1,14 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlmodel import Session, select
 from typing import List
+from uuid import UUID
 from twilio.rest import Client
 from twilio.twiml.messaging_response import MessagingResponse
+from datetime import datetime
 import os
 import phonenumbers
 from phonenumbers import NumberParseException
 
 from database import get_db
-from models import Message, MessageCreate, MessageRead, MessageDirection, Person, User
+from models import Message, MessageCreate, MessageRead, MessageDirection, Person, User, SMSSendRequest
 from routers.auth import get_current_user
 
 router = APIRouter(prefix="/sms", tags=["sms"])
@@ -32,7 +34,7 @@ def format_phone_number(phone_number: str) -> str:
 
 @router.post("/send", response_model=MessageRead)
 async def send_sms(
-    message_data: MessageCreate,
+    message_data: SMSSendRequest,
     session: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -47,7 +49,27 @@ async def send_sms(
         raise HTTPException(status_code=400, detail="Person has no phone number")
     
     # Format phone number
-    to_number = format_phone_number(person.phone_number)
+    try:
+        to_number = format_phone_number(person.phone_number)
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid phone number: {str(e)}")
+    
+    # Check if Twilio is configured
+    if not TWILIO_PHONE_NUMBER:
+        print("WARNING: TWILIO_PHONE_NUMBER not configured, skipping SMS send")
+        # For development, just save the message without sending
+        message = Message(
+            body=message_data.body,
+            direction=MessageDirection.OUTBOUND,
+            person_id=message_data.person_id,
+            user_id=current_user.id
+        )
+        session.add(message)
+        session.commit()
+        session.refresh(message)
+        return message
     
     # Send via Twilio
     try:
@@ -57,6 +79,7 @@ async def send_sms(
             to=to_number
         )
     except Exception as e:
+        print(f"Twilio error: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to send message: {str(e)}")
     
     # Save to database
@@ -67,15 +90,20 @@ async def send_sms(
         user_id=current_user.id
     )
     session.add(message)
+
+    # Update person's last_contact_date
+    person.last_contact_date = datetime.utcnow()
+    session.add(person)
+
     session.commit()
     session.refresh(message)
-    
+
     return message
 
 
 @router.get("/messages/{person_id}", response_model=List[MessageRead])
 async def get_messages(
-    person_id: str,
+    person_id: UUID,
     session: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -122,8 +150,13 @@ async def twilio_webhook(request: Request, session: Session = Depends(get_db)):
             user_id=person.user_id
         )
         session.add(message)
+
+        # Update person's last_contact_date
+        person.last_contact_date = datetime.utcnow()
+        session.add(person)
+
         session.commit()
-    
+
     # Return empty TwiML response
     resp = MessagingResponse()
     return str(resp)
