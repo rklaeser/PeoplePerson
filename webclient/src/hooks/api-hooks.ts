@@ -24,6 +24,7 @@ export const queryKeys = {
   tags: (params?: { category?: string; search?: string }) => ['tags', params] as const,
   tag: (id: string) => ['tag', id] as const,
   personTags: (personId: string) => ['person-tags', personId] as const,
+  mapData: ['map-data'] as const,
 }
 
 // User hooks
@@ -113,6 +114,14 @@ export const useMarkAsContacted = () => {
       // Invalidate people list to update health scores there too
       queryClient.invalidateQueries({ queryKey: ['people'] })
     },
+  })
+}
+
+export const useMapData = () => {
+  return useQuery({
+    queryKey: queryKeys.mapData,
+    queryFn: api.getMapData,
+    staleTime: 60 * 1000, // 1 minute
   })
 }
 

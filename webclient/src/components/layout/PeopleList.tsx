@@ -10,7 +10,6 @@ import { Search, Plus, Menu } from 'lucide-react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useRef } from 'react'
 import { useUIStore } from '@/stores/ui-store'
-import { HamburgerMenu } from './HamburgerMenu'
 import { TableView } from './TableView'
 
 export function PeopleList() {
@@ -106,12 +105,10 @@ export function PeopleList() {
   }
 
   return (
-    <>
-      <HamburgerMenu />
-      <aside
-        className="w-[350px] bg-card border-r border-border flex flex-col"
-        aria-label="People list"
-      >
+    <aside
+      className="w-[350px] bg-card border-r border-border flex flex-col"
+      aria-label="People list"
+    >
         {/* Header */}
         <div className="p-4 border-b border-border space-y-3">
           <div className="flex items-center justify-between">
@@ -213,7 +210,6 @@ export function PeopleList() {
         <TableView />
       )}
     </aside>
-    </>
   )
 }
 

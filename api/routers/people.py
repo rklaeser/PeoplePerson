@@ -8,6 +8,8 @@ from database import get_db
 from models import Person, PersonCreate, PersonRead, PersonUpdate, History, HistoryCreate, Tag, TagRead, PersonTag, NotebookEntry
 from routers.auth import get_current_user_id
 from services.health_score import calculate_health_score, get_health_status, get_health_emoji
+from services.location import get_person_coordinates
+from services.geocoding import geocode_address
 
 router = APIRouter()
 
@@ -70,6 +72,56 @@ async def get_people(
     return result
 
 
+@router.get("/map-data")
+async def get_map_data(
+    db: Session = Depends(get_db),
+    user_id: UUID = Depends(get_current_user_id)
+) -> List[dict]:
+    """
+    Get all people with coordinates for map display.
+
+    Returns:
+        List of people with location data
+
+    Example response:
+        [
+            {
+                "id": "uuid",
+                "name": "Alice",
+                "latitude": 37.7749,
+                "longitude": -122.4194,
+                "location_source": "personal",
+            },
+            {
+                "id": "uuid",
+                "name": "Bob",
+                "latitude": 37.7849,
+                "longitude": -122.4094,
+                "location_source": "tag:Climbing Gym",
+            }
+        ]
+    """
+    people = db.exec(
+        select(Person).where(Person.user_id == user_id)
+    ).all()
+
+    map_data = []
+    for person in people:
+        coords = get_person_coordinates(db, person)
+        if coords:
+            latitude, longitude, location_source = coords
+
+            map_data.append({
+                "id": str(person.id),
+                "name": person.name,
+                "latitude": latitude,
+                "longitude": longitude,
+                "location_source": location_source,
+            })
+
+    return map_data
+
+
 @router.post("/", response_model=PersonRead)
 async def create_person(
     person: PersonCreate,
@@ -109,6 +161,22 @@ async def update_person(
     person_data = person_update.model_dump(exclude_unset=True)
     for key, value in person_data.items():
         setattr(person, key, value)
+
+    # If address changed, re-geocode
+    address_fields = ['street_address', 'city', 'state', 'zip']
+    if any(key in person_data for key in address_fields):
+        coords = geocode_address(
+            street_address=person.street_address,
+            city=person.city,
+            state=person.state,
+            zip_code=person.zip
+        )
+        if coords:
+            person.latitude, person.longitude = coords
+        else:
+            # Clear coords if geocoding fails
+            person.latitude = None
+            person.longitude = None
 
     db.add(person)
     db.commit()

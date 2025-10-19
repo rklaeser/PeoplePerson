@@ -38,8 +38,12 @@ export interface UIStore {
   toggleHamburgerMenu: () => void
 
   // View mode state
-  viewMode: 'list' | 'table'
-  setViewMode: (mode: 'list' | 'table') => void
+  viewMode: 'list' | 'table' | 'map'
+  setViewMode: (mode: 'list' | 'table' | 'map') => void
+
+  // Location settings for map
+  defaultLocation?: { city: string; state: string; lat: number; lng: number }
+  setDefaultLocation: (location: { city: string; state: string; lat: number; lng: number } | undefined) => void
 }
 
 export const useUIStore = create<UIStore>()(
@@ -83,6 +87,10 @@ export const useUIStore = create<UIStore>()(
       // View mode state
       viewMode: 'list',
       setViewMode: (mode) => set({ viewMode: mode }),
+
+      // Location settings
+      defaultLocation: undefined,
+      setDefaultLocation: (location) => set({ defaultLocation: location }),
     }),
     {
       name: 'peopleperson-ui-store',
@@ -93,6 +101,7 @@ export const useUIStore = create<UIStore>()(
         theme: state.theme,
         composerExpanded: state.composerExpanded,
         viewMode: state.viewMode,
+        defaultLocation: state.defaultLocation,
       }),
     }
   )

@@ -60,6 +60,13 @@ class PersonBase(SQLModel):
     phone_number: Optional[str] = None
     last_contact_date: datetime = Field(default_factory=datetime.utcnow)
 
+    # Location fields
+    street_address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+
 
 class Person(PersonBase, table=True):
     __tablename__ = "people"
@@ -92,7 +99,15 @@ class TagBase(SQLModel):
     category: str = Field(default="general")
     color: Optional[str] = None
     description: Optional[str] = None
-    
+
+    # Location fields
+    street_address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    zip: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+
     @field_validator('name')
     @classmethod
     def validate_name(cls, v):
@@ -218,6 +233,11 @@ class PersonUpdate(SQLModel):
     email: Optional[str] = None
     phone_number: Optional[str] = None
     last_contact_date: Optional[datetime] = None
+    street_address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 
 class PersonRead(PersonBase):
@@ -244,6 +264,12 @@ class TagUpdate(SQLModel):
     category: Optional[str] = None
     color: Optional[str] = None
     description: Optional[str] = None
+    street_address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    zip: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 
 class TagRead(TagBase):

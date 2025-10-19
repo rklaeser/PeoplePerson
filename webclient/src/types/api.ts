@@ -28,6 +28,13 @@ export interface Person {
   latest_notebook_entry_content?: string
   latest_notebook_entry_time?: string
 
+  // Location fields
+  street_address?: string
+  city?: string
+  state?: string
+  latitude?: number
+  longitude?: number
+
   // Computed health score fields
   health_score: number
   health_status: 'healthy' | 'warning' | 'dormant'
@@ -57,6 +64,11 @@ export interface PersonUpdate {
   email?: string
   phone_number?: string
   last_contact_date?: string
+  street_address?: string
+  city?: string
+  state?: string
+  latitude?: number
+  longitude?: number
 }
 
 export interface Tag {
@@ -68,6 +80,14 @@ export interface Tag {
   user_id: string
   created_at: string
   updated_at: string
+
+  // Location fields
+  street_address?: string
+  city?: string
+  state?: string
+  zip?: string
+  latitude?: number
+  longitude?: number
 }
 
 export interface TagCreate {
@@ -82,6 +102,12 @@ export interface TagUpdate {
   category?: string
   color?: string
   description?: string
+  street_address?: string
+  city?: string
+  state?: string
+  zip?: string
+  latitude?: number
+  longitude?: number
 }
 
 export interface History {
@@ -179,4 +205,13 @@ export interface ConfirmPersonRequest {
   extraction: PersonExtraction
   action: 'create_new' | 'link_existing'
   existing_id?: string
+}
+
+// Map view types
+export interface MapPerson {
+  id: string
+  name: string
+  latitude: number
+  longitude: number
+  location_source: string
 }

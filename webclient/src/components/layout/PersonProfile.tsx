@@ -96,6 +96,9 @@ export function PersonProfile({ personId }: PersonProfileProps) {
     setFormData({
       name: person.name,
       phone_number: person.phone_number || '',
+      street_address: person.street_address || '',
+      city: person.city || '',
+      state: person.state || '',
       zip: person.zip || '',
       birthday: person.birthday || '',
     })
@@ -300,9 +303,29 @@ export function PersonProfile({ personId }: PersonProfileProps) {
                 <div className="flex items-center gap-3">
                   <MapPin size={16} className="text-muted-foreground flex-shrink-0" />
                   <Input
+                    value={formData.street_address || ''}
+                    onChange={(e) => setFormData({ ...formData, street_address: e.target.value })}
+                    placeholder="Street Address"
+                  />
+                </div>
+                <div className="flex items-center gap-3 ml-8">
+                  <Input
+                    value={formData.city || ''}
+                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                    placeholder="City"
+                    className="flex-1"
+                  />
+                  <Input
+                    value={formData.state || ''}
+                    onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                    placeholder="State"
+                    className="w-20"
+                  />
+                  <Input
                     value={formData.zip || ''}
                     onChange={(e) => setFormData({ ...formData, zip: e.target.value })}
-                    placeholder="ZIP code"
+                    placeholder="ZIP"
+                    className="w-24"
                   />
                 </div>
                 <div className="flex items-center gap-3">
@@ -322,10 +345,15 @@ export function PersonProfile({ personId }: PersonProfileProps) {
                     <span>{person.phone_number}</span>
                   </div>
                 )}
-                {person.zip && (
+                {(person.street_address || person.city || person.state || person.zip) && (
                   <div className="flex items-center gap-3">
-                    <MapPin size={16} className="text-muted-foreground" />
-                    <span>{person.zip}</span>
+                    <MapPin size={16} className="text-muted-foreground flex-shrink-0" />
+                    <div className="flex flex-col">
+                      {person.street_address && <span>{person.street_address}</span>}
+                      <span>
+                        {[person.city, person.state, person.zip].filter(Boolean).join(', ')}
+                      </span>
+                    </div>
                   </div>
                 )}
                 {person.birthday && (

@@ -1,12 +1,15 @@
+import { useState } from 'react'
 import { useUIStore } from '@/stores/ui-store'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { X, LayoutList, Table, Settings, LogOut } from 'lucide-react'
+import { X, LayoutList, Table, Map, Settings as SettingsIcon, LogOut } from 'lucide-react'
+import { Settings } from './Settings'
 
 export function HamburgerMenu() {
   const { hamburgerMenuOpen, setHamburgerMenuOpen, viewMode, setViewMode } = useUIStore()
   const { logout } = useAuth()
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   if (!hamburgerMenuOpen) return null
 
@@ -42,10 +45,9 @@ export function HamburgerMenu() {
           {/* View Mode Toggle */}
           <div>
             <h3 className="text-sm font-medium mb-2">View Mode</h3>
-            <div className="flex gap-2">
+            <div className="grid grid-cols-2 gap-2">
               <Button
                 variant={viewMode === 'list' ? 'default' : 'outline'}
-                className="flex-1"
                 onClick={() => {
                   setViewMode('list')
                   setHamburgerMenuOpen(false)
@@ -56,7 +58,6 @@ export function HamburgerMenu() {
               </Button>
               <Button
                 variant={viewMode === 'table' ? 'default' : 'outline'}
-                className="flex-1"
                 onClick={() => {
                   setViewMode('table')
                   setHamburgerMenuOpen(false)
@@ -64,6 +65,17 @@ export function HamburgerMenu() {
               >
                 <Table size={16} className="mr-2" />
                 Table
+              </Button>
+              <Button
+                variant={viewMode === 'map' ? 'default' : 'outline'}
+                className="col-span-2"
+                onClick={() => {
+                  setViewMode('map')
+                  setHamburgerMenuOpen(false)
+                }}
+              >
+                <Map size={16} className="mr-2" />
+                Map
               </Button>
             </div>
           </div>
@@ -75,11 +87,11 @@ export function HamburgerMenu() {
             variant="ghost"
             className="w-full justify-start gap-2"
             onClick={() => {
-              // TODO: Navigate to settings
+              setSettingsOpen(true)
               setHamburgerMenuOpen(false)
             }}
           >
-            <Settings size={16} />
+            <SettingsIcon size={16} />
             Settings
           </Button>
           <Button
@@ -95,6 +107,12 @@ export function HamburgerMenu() {
           </Button>
         </div>
       </div>
+
+      {/* Settings Dialog */}
+      <Settings
+        isOpen={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+      />
     </>
   )
 }

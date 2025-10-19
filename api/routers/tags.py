@@ -6,6 +6,7 @@ from uuid import UUID
 from database import get_db
 from models import Tag, TagCreate, TagRead, TagUpdate, PersonTag, Person
 from routers.auth import get_current_user_id
+from services.geocoding import geocode_address
 
 router = APIRouter()
 
@@ -90,11 +91,23 @@ async def update_tag(
     tag = db.get(Tag, tag_id)
     if not tag or tag.user_id != user_id:
         raise HTTPException(status_code=404, detail="Tag not found")
-    
+
     tag_data = tag_update.model_dump(exclude_unset=True)
     for key, value in tag_data.items():
         setattr(tag, key, value)
-    
+
+    # If address changed, re-geocode
+    address_fields = ['street_address', 'city', 'state', 'zip']
+    if any(key in tag_data for key in address_fields):
+        coords = geocode_address(
+            street_address=tag.street_address,
+            city=tag.city,
+            state=tag.state,
+            zip_code=tag.zip
+        )
+        if coords:
+            tag.latitude, tag.longitude = coords
+
     db.add(tag)
     db.commit()
     db.refresh(tag)
