@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
-import { usePeople } from '@/hooks/api-hooks'
+import { usePeople, useCreatePerson } from '@/hooks/api-hooks'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Avatar } from '@/components/ui/avatar'
@@ -17,6 +17,7 @@ export function PeopleList() {
   const search = useSearch({ from: '/people' })
   const [searchQuery, setSearchQuery] = useState(search.search || '')
   const { viewMode, toggleHamburgerMenu } = useUIStore()
+  const createPerson = useCreatePerson()
 
   const { data: rawPeople = [], isLoading, error } = usePeople({
     filter: search.filter,
@@ -72,9 +73,26 @@ export function PeopleList() {
   const handleSearchChange = (value: string) => {
     setSearchQuery(value)
     // TODO: Debounce this
-    navigate({ 
+    navigate({
       search: { ...search, search: value || undefined }
     })
+  }
+
+  const handleAddPerson = async () => {
+    try {
+      const newPerson = await createPerson.mutateAsync({
+        name: 'Untitled User',
+        body: '',
+      })
+      // Navigate to the new person in edit mode
+      navigate({
+        to: '/people/$personId',
+        params: { personId: newPerson.id },
+        search: { panel: 'profile', edit: 'true' }
+      })
+    } catch (error) {
+      console.error('Failed to create person:', error)
+    }
   }
 
   if (isLoading) {
@@ -106,7 +124,7 @@ export function PeopleList() {
 
   return (
     <aside
-      className="w-[350px] bg-card border-r border-border flex flex-col"
+      className="w-[350px] h-screen bg-card border-r border-border flex flex-col"
       aria-label="People list"
     >
         {/* Header */}
@@ -123,7 +141,12 @@ export function PeopleList() {
               </Button>
               <h2 className="text-lg font-semibold">People</h2>
             </div>
-            <Button size="sm" variant="outline">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleAddPerson}
+              disabled={createPerson.isPending}
+            >
               <Plus size={16} className="mr-2" />
               Add
             </Button>
@@ -172,8 +195,7 @@ export function PeopleList() {
       {viewMode === 'list' ? (
         <div
           ref={parentRef}
-          className="flex-1 overflow-auto custom-scrollbar"
-          style={{ height: 'calc(100vh - 140px)' }}
+          className="flex-1 overflow-auto scrollbar-hide min-h-0"
         >
           {people.length === 0 ? (
             <div className="flex items-center justify-center h-full text-muted-foreground">
@@ -272,12 +294,36 @@ function PersonListItem({ person, onClick, onNameClick, style }: PersonListItemP
         <Avatar name={person.name} size={40} />
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2 mb-1">
-            <h3
-              className="font-medium truncate hover:underline cursor-pointer"
-              onClick={(e) => onNameClick(person.id, e)}
-            >
-              {person.name}
-            </h3>
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <h3
+                className="font-medium hover:underline cursor-pointer flex-shrink-0"
+                onClick={(e) => onNameClick(person.id, e)}
+              >
+                {person.name}
+              </h3>
+              {person.tags && person.tags.length > 0 && (
+                <div className="flex gap-1 flex-wrap overflow-hidden">
+                  {person.tags.slice(0, 3).map((tag) => (
+                    <span
+                      key={tag.id}
+                      className="text-xs px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20"
+                      style={{
+                        backgroundColor: tag.color ? `${tag.color}15` : undefined,
+                        borderColor: tag.color ? `${tag.color}40` : undefined,
+                        color: tag.color || undefined
+                      }}
+                    >
+                      {tag.name}
+                    </span>
+                  ))}
+                  {person.tags.length > 3 && (
+                    <span className="text-xs text-muted-foreground">
+                      +{person.tags.length - 3}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <HealthScore
                 score={person.health_score}

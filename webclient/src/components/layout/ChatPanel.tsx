@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
-import { cn } from '@/lib/utils'
-import { X, Send, Loader2, Users, AlertCircle, Edit2, Save, XCircle, Mail, Phone, Trash2 } from 'lucide-react'
-import { useExtractPeople, useConfirmPerson, useUpdatePerson, useDeletePerson } from '@/hooks/api-hooks'
-import type { ExtractionResponse, DuplicateWarning, Person } from '@/types/api'
+import { cn, formatTime } from '@/lib/utils'
+import { X, ArrowUp, Loader2, Users, AlertCircle, Edit2, Save, XCircle, Mail, Phone, Trash2, ExternalLink } from 'lucide-react'
+import { useExtractPeople, useConfirmPerson, useConfirmTagAssignment, useConfirmMemoryEntry, useUpdatePerson, useDeletePerson, usePeople } from '@/hooks/api-hooks'
+import { useUIStore } from '@/stores/ui-store'
+import type { ExtractionResponse, DuplicateWarning, Person, TagAssignmentMatch, MemoryUpdateMatch, PersonMatch } from '@/types/api'
 
 interface ChatPanelProps {
   isOpen: boolean
@@ -14,15 +16,21 @@ interface ChatPanelProps {
 }
 
 export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
+  const navigate = useNavigate()
+  const { assistantName } = useUIStore()
   const [narrative, setNarrative] = useState('')
   const [extractionResult, setExtractionResult] = useState<ExtractionResponse | null>(null)
   const [sessionContacts, setSessionContacts] = useState<Person[]>([])
   const [editingContactId, setEditingContactId] = useState<string | null>(null)
+  const [disambiguationSelections, setDisambiguationSelections] = useState<Record<string, string>>({})
 
   const extractPeople = useExtractPeople()
   const confirmPerson = useConfirmPerson()
+  const confirmTagAssignment = useConfirmTagAssignment()
+  const confirmMemoryEntry = useConfirmMemoryEntry()
   const updatePerson = useUpdatePerson()
   const deletePerson = useDeletePerson()
+  const { data: allPeople = [] } = usePeople({})
 
   // Clear session when panel closes
   useEffect(() => {
@@ -31,13 +39,25 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
       setEditingContactId(null)
       setNarrative('')
       setExtractionResult(null)
+      setDisambiguationSelections({})
     }
   }, [isOpen])
+
+  // Clear disambiguation selections when extraction result changes
+  useEffect(() => {
+    setDisambiguationSelections({})
+  }, [extractionResult])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!narrative.trim()) return
+
+    // Check character limit
+    if (narrative.length > 1000) {
+      alert('Message is too long. Please keep it under 1000 characters.')
+      return
+    }
 
     try {
       const result = await extractPeople.mutateAsync({ narrative })
@@ -97,6 +117,107 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
     }
   }
 
+  const handleTagAssignment = async (assignment: TagAssignmentMatch) => {
+    try {
+      // Collect all valid person IDs from all matches
+      const validPersonIds: string[] = []
+
+      // Collect person IDs from all matched people
+      for (const matchResult of assignment.matched_people) {
+        if (matchResult.matches.length === 0) {
+          // Skip unmatched
+          continue
+        } else if (matchResult.is_ambiguous) {
+          // Use the selected person ID from disambiguation
+          const selectedId = disambiguationSelections[matchResult.extracted_name]
+          if (selectedId) {
+            validPersonIds.push(selectedId)
+          }
+        } else {
+          // Single match - use it
+          validPersonIds.push(matchResult.matches[0].person_id)
+        }
+      }
+
+      if (validPersonIds.length === 0) {
+        alert('No matching people found. Please create these contacts first.')
+        return
+      }
+
+      await confirmTagAssignment.mutateAsync({
+        tag_name: assignment.tag_name,
+        operation: assignment.operation,
+        person_ids: validPersonIds
+      })
+
+      // Remove this assignment from the list
+      setExtractionResult(prev => {
+        if (!prev || !prev.tag_assignments) return prev
+        const remaining = prev.tag_assignments.filter(a => a !== assignment)
+
+        // If no more tag assignments, clear textarea
+        if (remaining.length === 0) {
+          setNarrative('')
+          // Clear extraction result after showing success
+          setTimeout(() => setExtractionResult(null), 2000)
+        }
+
+        return {
+          ...prev,
+          tag_assignments: remaining
+        }
+      })
+    } catch (error) {
+      console.error('Tag assignment failed:', error)
+    }
+  }
+
+  const handleMemoryEntry = async (update: MemoryUpdateMatch) => {
+    try {
+      // Check if ambiguous
+      if (update.matched_person.is_ambiguous) {
+        alert('Multiple people match this name. Please be more specific.')
+        return
+      }
+
+      // Prepare request - either with person_id (existing) or person_name (new)
+      const hasMatch = update.matched_person.matches.length > 0
+      const request = hasMatch
+        ? {
+            person_id: update.matched_person.matches[0].person_id,
+            content: update.entry_content,
+            date: update.parsed_date
+          }
+        : {
+            person_name: update.matched_person.extracted_name,
+            content: update.entry_content,
+            date: update.parsed_date
+          }
+
+      await confirmMemoryEntry.mutateAsync(request)
+
+      // Remove this entry from the list
+      setExtractionResult(prev => {
+        if (!prev || !prev.memory_updates) return prev
+        const remaining = prev.memory_updates.filter(u => u !== update)
+
+        // If no more memory entries, clear textarea
+        if (remaining.length === 0) {
+          setNarrative('')
+          // Clear extraction result after showing success
+          setTimeout(() => setExtractionResult(null), 2000)
+        }
+
+        return {
+          ...prev,
+          memory_updates: remaining
+        }
+      })
+    } catch (error) {
+      console.error('Memory entry failed:', error)
+    }
+  }
+
   const handleClose = () => {
     setSessionContacts([])
     setEditingContactId(null)
@@ -126,8 +247,14 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b">
           <div className="flex items-center gap-2">
-            <Users size={20} />
-            <h2 className="text-lg font-semibold">Add Contacts</h2>
+            <div className="w-10 h-10 rounded-full bg-muted/50 border-2 border-border flex items-center justify-center p-1">
+              <img
+                src={assistantName === 'Scout' ? '/scout.png' : '/nico.png'}
+                alt={assistantName}
+                className="w-full h-full rounded-full object-cover"
+              />
+            </div>
+            <h2 className="text-lg font-semibold">{assistantName}</h2>
           </div>
           <Button
             variant="ghost"
@@ -140,48 +267,56 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {/* Instructions */}
-          <Card className="p-4 bg-muted/50">
-            <p className="text-sm text-muted-foreground">
-              Describe the people you've met and I'll create their contact records. For example:
-            </p>
-            <p className="text-sm mt-2 italic text-muted-foreground/80">
-              "I met Sarah today. She's a designer from Portland who loves hiking."
-            </p>
-          </Card>
+          {/* Instructions - Scout's message on left */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <div className="w-10 h-10 rounded-full bg-muted/50 border-2 border-border flex items-center justify-center p-1">
+                <img
+                  src={assistantName === 'Scout' ? '/scout.png' : '/nico.png'}
+                  alt={assistantName}
+                  className="w-full h-full rounded-full object-cover"
+                />
+              </div>
+              <span className="text-sm font-semibold">{assistantName}</span>
+            </div>
+            <Card className="p-4 bg-muted/50 max-w-[80%]">
+              <p className="text-sm text-muted-foreground mb-2">
+                Bark! Let's...
+              </p>
+              <ul className="text-sm text-muted-foreground/80 space-y-1">
+                <li>• Add friends: "I met Sarah. She's a designer from Portland."</li>
+                <li>• Update friends: "TJ and Jane are part of Noisebridge. Add the tag."</li>
+                <li>• Record memories: "I saw Michael today. He went for a run."</li>
+              </ul>
+            </Card>
+          </div>
 
           {/* Input Form */}
-          <form onSubmit={handleSubmit} className="space-y-3">
-            <Textarea
-              value={narrative}
-              onChange={(e) => setNarrative(e.target.value)}
-              placeholder="Tell me about the people you met..."
-              className="min-h-[120px] resize-none"
-              disabled={extractPeople.isPending}
-              maxLength={1000}
-            />
-
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">
-                {narrative.length}/1000
-              </span>
-              <Button
+          <form onSubmit={handleSubmit}>
+            <div className="relative">
+              <Textarea
+                value={narrative}
+                onChange={(e) => setNarrative(e.target.value)}
+                placeholder="How can I help?"
+                className="min-h-[120px] resize-none pr-12"
+                disabled={extractPeople.isPending}
+              />
+              <button
                 type="submit"
                 disabled={!narrative.trim() || extractPeople.isPending}
-                className="gap-2"
+                className={cn(
+                  "absolute bottom-2 right-2 w-8 h-8 rounded-lg flex items-center justify-center transition-all",
+                  !narrative.trim() || extractPeople.isPending
+                    ? "bg-muted text-muted-foreground cursor-not-allowed"
+                    : "bg-blue-500 text-white hover:bg-blue-600"
+                )}
               >
                 {extractPeople.isPending ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" />
-                    Processing...
-                  </>
+                  <Loader2 size={18} className="animate-spin" />
                 ) : (
-                  <>
-                    <Send size={16} />
-                    Extract
-                  </>
+                  <ArrowUp size={18} />
                 )}
-              </Button>
+              </button>
             </div>
           </form>
 
@@ -193,10 +328,37 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                 <Card className={cn(
                   "p-4",
                   extractionResult.message.includes('Added')
-                    ? "bg-green-500/10 border-green-500/20"
+                    ? "bg-blue-500/10 border-blue-500/20"
                     : "bg-muted"
                 )}>
-                  <p className="text-sm">{extractionResult.message}</p>
+                  {extractionResult.created_persons && extractionResult.created_persons.length > 0 ? (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">
+                        Created new {extractionResult.created_persons.length === 1 ? 'friend' : 'friends'}:
+                      </p>
+                      <div className="space-y-1">
+                        {extractionResult.created_persons.map((person) => (
+                          <button
+                            key={person.id}
+                            onClick={() => {
+                              navigate({
+                                to: '/people/$personId',
+                                params: { personId: person.id },
+                                search: { panel: 'profile' }
+                              })
+                              handleClose()
+                            }}
+                            className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 hover:underline"
+                          >
+                            <span>{person.name}</span>
+                            <ExternalLink size={14} />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm">{extractionResult.message}</p>
+                  )}
                 </Card>
               )}
 
@@ -245,6 +407,177 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                   </div>
                 </Card>
               ))}
+
+              {/* Tag Assignment Confirmations */}
+              {extractionResult.tag_assignments?.map((assignment, index) => {
+                const ambiguousMatches = assignment.matched_people.filter(m => m.is_ambiguous)
+                const allAmbiguousResolved = ambiguousMatches.every(m =>
+                  disambiguationSelections[m.extracted_name]
+                )
+
+                return (
+                  <Card key={index} className="p-4 bg-blue-500/10 border-blue-500/20">
+                    <div className="mb-3">
+                      <p className="font-medium text-sm mb-3">
+                        Add tag "{assignment.tag_name}" to:
+                      </p>
+
+                      {assignment.matched_people.map((matchResult, idx) => (
+                        <div key={idx} className="mb-3 last:mb-0">
+                          {matchResult.matches.length === 0 ? (
+                            <div className="flex items-center gap-2 text-sm">
+                              <span className="text-red-600">✗</span>
+                              <span>{matchResult.extracted_name} (not found)</span>
+                            </div>
+                          ) : matchResult.is_ambiguous ? (
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2 text-sm">
+                                <span className="text-yellow-600">⚠</span>
+                                <span className="font-medium">Which "{matchResult.extracted_name}"?</span>
+                              </div>
+                              <div className="space-y-2 ml-6">
+                                {matchResult.matches.map((match) => {
+                                  const personDetails = allPeople.find(p => p.id === match.person_id)
+                                  const isSelected = disambiguationSelections[matchResult.extracted_name] === match.person_id
+
+                                  return (
+                                    <button
+                                      key={match.person_id}
+                                      onClick={() => setDisambiguationSelections(prev => ({
+                                        ...prev,
+                                        [matchResult.extracted_name]: match.person_id
+                                      }))}
+                                      className={cn(
+                                        "w-full text-left p-3 rounded-md border-2 transition-all",
+                                        isSelected
+                                          ? "border-blue-500 bg-blue-500/10"
+                                          : "border-border bg-card hover:border-blue-300"
+                                      )}
+                                    >
+                                      <div className="flex items-start justify-between gap-2">
+                                        <div className="flex-1 min-w-0">
+                                          <p className="font-medium text-sm">{match.person_name}</p>
+                                          {personDetails?.latest_notebook_entry_content && (
+                                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                                              {personDetails.latest_notebook_entry_content}
+                                            </p>
+                                          )}
+                                          <p className="text-xs text-muted-foreground mt-1">
+                                            Created {formatTime(personDetails?.created_at || '')}
+                                          </p>
+                                        </div>
+                                        {isSelected && (
+                                          <span className="text-blue-600 text-lg shrink-0">✓</span>
+                                        )}
+                                      </div>
+                                    </button>
+                                  )
+                                })}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2 text-sm">
+                              <span className="text-green-600">✓</span>
+                              <span>{matchResult.matches[0].person_name} ({(matchResult.matches[0].similarity * 100).toFixed(0)}% match)</span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    <Button
+                      size="sm"
+                      onClick={() => handleTagAssignment(assignment)}
+                      disabled={confirmTagAssignment.isPending || !allAmbiguousResolved}
+                      className="w-full"
+                    >
+                      {confirmTagAssignment.isPending ? 'Assigning...' :
+                       !allAmbiguousResolved ? 'Select a person for each name' :
+                       'Confirm'}
+                    </Button>
+                  </Card>
+                )
+              })}
+
+              {/* Memory Confirmations */}
+              {extractionResult.memory_updates?.map((update, index) => {
+                const hasMatch = update.matched_person.matches.length > 0
+                const isAmbiguous = update.matched_person.is_ambiguous
+
+                return (
+                  <Card key={index} className="p-4 bg-purple-500/10 border-purple-500/20">
+                    <div className="mb-3">
+                      <p className="font-medium text-sm mb-2">
+                        {hasMatch && !isAmbiguous
+                          ? 'Add memory:'
+                          : isAmbiguous
+                          ? 'Multiple matches found:'
+                          : 'Create friend & add memory:'}
+                      </p>
+                      {isAmbiguous ? (
+                        <>
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-yellow-600">⚠</span>
+                            <span className="text-sm font-medium">{update.matched_person.extracted_name} matches multiple people:</span>
+                          </div>
+                          <ul className="ml-6 space-y-0.5 mb-2">
+                            {update.matched_person.matches.map((match, matchIdx) => (
+                              <li key={matchIdx} className="text-xs text-muted-foreground">
+                                • {match.person_name} ({(match.similarity * 100).toFixed(0)}% match)
+                              </li>
+                            ))}
+                          </ul>
+                          <p className="text-sm mb-1">
+                            <span className="text-muted-foreground">Date:</span> {update.parsed_date}
+                          </p>
+                          <p className="text-sm mb-3">
+                            <span className="text-muted-foreground">Entry:</span> {update.entry_content}
+                          </p>
+                        </>
+                      ) : hasMatch ? (
+                        <>
+                          <p className="text-sm mb-1">
+                            <span className="text-muted-foreground">Person:</span> {update.matched_person.matches[0].person_name} ({(update.matched_person.matches[0].similarity * 100).toFixed(0)}% match)
+                          </p>
+                          <p className="text-sm mb-1">
+                            <span className="text-muted-foreground">Date:</span> {update.parsed_date}
+                          </p>
+                          <p className="text-sm mb-3">
+                            <span className="text-muted-foreground">Entry:</span> {update.entry_content}
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-sm mb-1">
+                            <span className="text-muted-foreground">Person:</span> <span className="text-orange-600">{update.matched_person.extracted_name} (new)</span>
+                          </p>
+                          <p className="text-sm mb-1">
+                            <span className="text-muted-foreground">Date:</span> {update.parsed_date}
+                          </p>
+                          <p className="text-sm mb-3">
+                            <span className="text-muted-foreground">Entry:</span> {update.entry_content}
+                          </p>
+                        </>
+                      )}
+                    </div>
+
+                    <Button
+                      size="sm"
+                      onClick={() => handleMemoryEntry(update)}
+                      disabled={confirmMemoryEntry.isPending || isAmbiguous}
+                      className="w-full"
+                    >
+                      {confirmMemoryEntry.isPending ? (
+                        hasMatch ? 'Adding...' : 'Creating...'
+                      ) : isAmbiguous ? (
+                        'Disambiguate name first'
+                      ) : (
+                        hasMatch ? 'Confirm' : 'Create friend & add memory'
+                      )}
+                    </Button>
+                  </Card>
+                )
+              })}
             </div>
           )}
 
@@ -332,8 +665,7 @@ function ContactCard({
     name: contact.name,
     body: contact.body,
     email: contact.email || '',
-    phone_number: contact.phone_number || '',
-    intent: contact.intent
+    phone_number: contact.phone_number || ''
   })
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)

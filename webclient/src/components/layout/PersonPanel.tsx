@@ -2,18 +2,19 @@ import { useParams, useSearch, useNavigate, useLocation } from '@tanstack/react-
 import { usePerson } from '@/hooks/api-hooks'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { MessageSquare, User, Activity, Sparkles } from 'lucide-react'
+import { MessageSquare, User, Activity } from 'lucide-react'
 import { MessageThread } from './MessageThread'
 import { PersonProfile } from './PersonProfile'
 import { PersonActivity } from './PersonActivity'
 import { useUIStore } from '@/stores/ui-store'
+import { Avatar } from '@/components/ui/avatar'
 
 export function PersonPanel() {
   const location = useLocation()
   const navigate = useNavigate()
   const { personId } = useParams({ from: '/people/$personId' })
   const search = useSearch({ from: '/people/$personId' }) || { panel: 'messages' }
-  const { toggleChatPanel } = useUIStore()
+  const { toggleChatPanel, assistantName } = useUIStore()
 
   // Check if we're on a person route
   const isPersonRoute = location.pathname.startsWith('/people/') && location.pathname !== '/people'
@@ -77,45 +78,60 @@ export function PersonPanel() {
   const handleTabChange = (panel: 'messages' | 'profile' | 'activity') => {
     navigate({
       to: '/people/$personId',
-      params: { personId },
+      params: { personId: personId || '' },
       search: { panel }
     })
   }
+
+  // Check if person has contact information
+  const hasContactInfo = !!(person?.email || person?.phone_number)
+
+  // Default to profile if on messages tab but no contact info
+  const activePanel = !hasContactInfo && search.panel === 'messages' ? 'profile' : search.panel
 
   return (
     <main className="flex-1 flex flex-col bg-background" aria-label="Person details">
       {/* Header with tabs */}
       <div className="border-b border-border bg-card">
         <div className="p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold">{person.name}</h2>
+          <div className="flex items-center gap-4 mb-4">
+            <Avatar name={person.name} size={64} />
+            <div className="flex-1">
+              <h2 className="text-4xl font-semibold">{person.name}</h2>
+            </div>
             <button
               onClick={toggleChatPanel}
-              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              className="flex items-center gap-1 px-3 py-2 rounded-full border-2 border-border text-muted-foreground hover:text-foreground hover:border-foreground transition-colors cursor-pointer"
             >
-              <Sparkles size={18} />
+              <img
+                src={assistantName === 'Scout' ? '/scout.png' : '/nico.png'}
+                alt={assistantName}
+                className="w-8 h-8 rounded-full object-cover"
+              />
               <span className="text-sm font-medium">Chat</span>
             </button>
           </div>
 
           {/* Tab navigation */}
           <div className="flex gap-1">
+            {hasContactInfo && (
+              <TabButton
+                active={activePanel === 'messages'}
+                onClick={() => handleTabChange('messages')}
+                icon={<MessageSquare size={16} />}
+              >
+                Messages
+              </TabButton>
+            )}
             <TabButton
-              active={search.panel === 'messages'}
-              onClick={() => handleTabChange('messages')}
-              icon={<MessageSquare size={16} />}
-            >
-              Messages
-            </TabButton>
-            <TabButton
-              active={search.panel === 'profile'}
+              active={activePanel === 'profile'}
               onClick={() => handleTabChange('profile')}
               icon={<User size={16} />}
             >
               Profile
             </TabButton>
             <TabButton
-              active={search.panel === 'activity'}
+              active={activePanel === 'activity'}
               onClick={() => handleTabChange('activity')}
               icon={<Activity size={16} />}
             >
@@ -127,9 +143,9 @@ export function PersonPanel() {
 
       {/* Panel content */}
       <div className="flex-1 overflow-hidden">
-        {search.panel === 'messages' && <MessageThread personId={personId} />}
-        {search.panel === 'profile' && <PersonProfile personId={personId} />}
-        {search.panel === 'activity' && <PersonActivity personId={personId} />}
+        {activePanel === 'messages' && <MessageThread personId={personId} />}
+        {activePanel === 'profile' && <PersonProfile personId={personId} />}
+        {activePanel === 'activity' && <PersonActivity personId={personId} />}
       </div>
     </main>
   )

@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react'
 import * as React from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
-import { usePeople, useTags, usePersonTags } from '@/hooks/api-hooks'
+import { usePeople, useTags } from '@/hooks/api-hooks'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Person } from '@/types/api'
+import { Person, Tag } from '@/types/api'
 import { cn } from '@/lib/utils'
 import { Search, Menu, ChevronUp, ChevronDown } from 'lucide-react'
 import { useUIStore } from '@/stores/ui-store'
@@ -47,11 +47,16 @@ export function TableView() {
   // Fetch all tags for filtering
   const { data: allTags = [] } = useTags()
 
-  // Store person tags mapping for filtering
-  // Note: This will be populated by individual TableRowWithTags components
-  // For tag filtering to work efficiently, we'll need to refactor this in the future
-  // to fetch all person-tag relationships in a single request
-  const [personTagsMap, setPersonTagsMap] = useState<Record<string, string[]>>({})
+  // Build person tags mapping for filtering from the tags already in person data
+  const personTagsMap = useMemo(() => {
+    const map: Record<string, string[]> = {}
+    rawPeople.forEach(person => {
+      if (person.tags && person.tags.length > 0) {
+        map[person.id] = person.tags.map(t => t.id)
+      }
+    })
+    return map
+  }, [rawPeople])
 
   // Filter and sort people
   const people = useMemo(() => {
@@ -297,17 +302,12 @@ export function TableView() {
                 </tr>
               ) : (
                 people.map((person) => (
-                  <TableRowWithTags
+                  <TableRow
                     key={person.id}
                     person={person}
                     selected={selectedIds.has(person.id)}
                     onSelect={handleSelectRow}
-                    onTagsLoaded={(tags) => {
-                      setPersonTagsMap(prev => ({
-                        ...prev,
-                        [person.id]: tags.map(t => t.id)
-                      }))
-                    }}
+                    tags={person.tags || []}
                   />
                 ))
               )}
@@ -362,38 +362,11 @@ function SortableHeader({ label, column, sortColumn, sortDirection, onSort, clas
   )
 }
 
-interface TableRowWithTagsProps {
-  person: Person
-  selected: boolean
-  onSelect: (id: string, checked: boolean) => void
-  onTagsLoaded: (tags: Array<{ id: string; name: string }>) => void
-}
-
-function TableRowWithTags({ person, selected, onSelect, onTagsLoaded }: TableRowWithTagsProps) {
-  const { data: personTags = [] } = usePersonTags(person.id)
-
-  // Notify parent when tags are loaded
-  React.useEffect(() => {
-    if (personTags.length > 0) {
-      onTagsLoaded(personTags)
-    }
-  }, [personTags, onTagsLoaded])
-
-  return (
-    <TableRow
-      person={person}
-      selected={selected}
-      onSelect={onSelect}
-      tags={personTags}
-    />
-  )
-}
-
 interface TableRowProps {
   person: Person
   selected: boolean
   onSelect: (id: string, checked: boolean) => void
-  tags: Array<{ id: string; name: string }>
+  tags: Tag[]
 }
 
 function TableRow({ person, selected, onSelect, tags }: TableRowProps) {
@@ -448,6 +421,11 @@ function TableRow({ person, selected, onSelect, tags }: TableRowProps) {
               <span
                 key={tag.id}
                 className="inline-flex items-center px-2 py-0.5 bg-primary/10 border border-primary/20 rounded-full text-xs"
+                style={{
+                  backgroundColor: tag.color ? `${tag.color}15` : undefined,
+                  borderColor: tag.color ? `${tag.color}40` : undefined,
+                  color: tag.color || undefined
+                }}
               >
                 {tag.name}
               </span>

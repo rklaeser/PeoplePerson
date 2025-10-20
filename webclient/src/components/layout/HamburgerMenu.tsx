@@ -7,7 +7,7 @@ import { X, LayoutList, Table, Map, Settings as SettingsIcon, LogOut } from 'luc
 import { Settings } from './Settings'
 
 export function HamburgerMenu() {
-  const { hamburgerMenuOpen, setHamburgerMenuOpen, viewMode, setViewMode } = useUIStore()
+  const { hamburgerMenuOpen, setHamburgerMenuOpen, viewMode, setViewMode, assistantName } = useUIStore()
   const { logout } = useAuth()
   const [settingsOpen, setSettingsOpen] = useState(false)
 
@@ -30,7 +30,14 @@ export function HamburgerMenu() {
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border">
-          <h2 className="text-lg font-semibold">PeoplePerson</h2>
+          <div className="flex items-center">
+            <img
+              src={assistantName === 'Scout' ? '/scout.png' : '/nico.png'}
+              alt={assistantName}
+              className="w-10 h-10 rounded-full -translate-y-0.5"
+            />
+            <h2 className="text-lg font-semibold">PeoplePerson</h2>
+          </div>
           <Button
             variant="ghost"
             size="icon"

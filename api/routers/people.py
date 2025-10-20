@@ -16,7 +16,7 @@ router = APIRouter()
 
 def enrich_person_with_health(person: Person, db: Session) -> PersonRead:
     """
-    Enrich a Person object with computed health score fields
+    Enrich a Person object with computed health score fields and tags
     """
     # Calculate health score
     health_score = calculate_health_score(person.last_contact_date)
@@ -30,12 +30,19 @@ def enrich_person_with_health(person: Person, db: Session) -> PersonRead:
     ).order_by(NotebookEntry.created_at.desc()).limit(1)
     latest_entry = db.exec(latest_entry_query).first()
 
+    # Get tags for this person
+    tags_query = select(Tag).join(PersonTag).where(
+        PersonTag.person_id == person.id
+    )
+    tags = db.exec(tags_query).all()
+
     # Build PersonRead dict
     person_dict = person.model_dump()
     person_dict['health_score'] = health_score
     person_dict['health_status'] = health_status
     person_dict['health_emoji'] = health_emoji
     person_dict['days_since_contact'] = days_since_contact
+    person_dict['tags'] = tags
 
     if latest_entry:
         person_dict['latest_notebook_entry_content'] = latest_entry.content
@@ -56,11 +63,18 @@ async def get_people(
     query = select(Person).where(Person.user_id == user_id)
 
     if search:
+        # Search in person fields OR tag names
+        tag_subquery = select(PersonTag.person_id).join(Tag).where(
+            Tag.user_id == user_id,
+            Tag.name.contains(search)
+        )
+
         query = query.where(
             or_(
                 Person.name.contains(search),
                 Person.body.contains(search),
-                Person.mnemonic.contains(search)
+                Person.mnemonic.contains(search),
+                Person.id.in_(tag_subquery)
             )
         )
 

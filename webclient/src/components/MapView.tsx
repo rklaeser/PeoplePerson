@@ -38,7 +38,7 @@ function AutoFitBounds({ people }: { people: MapPerson[] }) {
       const bounds = L.latLngBounds(
         people.map(p => [p.latitude, p.longitude])
       )
-      map.fitBounds(bounds, { padding: [50, 50] })
+      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 })
     }
   }, [people, map])
 
@@ -132,7 +132,7 @@ export function MapView() {
   }
 
   return (
-    <div className="relative h-full">
+    <div className="relative w-full h-full">
       {/* Floating hamburger menu button - hidden when menu is open */}
       {!hamburgerMenuOpen && (
         <Button
@@ -149,14 +149,14 @@ export function MapView() {
       <MapContainer
         key={`${mapCenter[0]}-${mapCenter[1]}`}
         center={mapCenter}
-        zoom={mapData.length > 0 ? 4 : 10}
-        style={{ height: '100%', width: '100%' }}
+        zoom={12}
+        style={{ height: '100%', width: '100%', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
         className="z-0"
         zoomControl={false}
       >
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
         />
 
         <ZoomControl position="topright" />

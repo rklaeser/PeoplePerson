@@ -15,12 +15,17 @@ from routers.auth import get_current_user
 
 router = APIRouter(prefix="/sms", tags=["sms"])
 
-# Initialize Twilio client
-twilio_client = Client(
-    os.getenv("TWILIO_ACCOUNT_SID"),
-    os.getenv("TWILIO_AUTH_TOKEN")
-)
+# Initialize Twilio client (optional for development)
+TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
+TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
 TWILIO_PHONE_NUMBER = os.getenv("TWILIO_PHONE_NUMBER")
+
+# Only create client if credentials are available
+twilio_client = None
+if TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN:
+    twilio_client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+else:
+    print("Warning: Twilio credentials not found. SMS features will be disabled.")
 
 
 def format_phone_number(phone_number: str) -> str:
@@ -57,8 +62,8 @@ async def send_sms(
         raise HTTPException(status_code=400, detail=f"Invalid phone number: {str(e)}")
     
     # Check if Twilio is configured
-    if not TWILIO_PHONE_NUMBER:
-        print("WARNING: TWILIO_PHONE_NUMBER not configured, skipping SMS send")
+    if not twilio_client or not TWILIO_PHONE_NUMBER:
+        print("WARNING: Twilio not configured, skipping SMS send")
         # For development, just save the message without sending
         message = Message(
             body=message_data.body,
@@ -70,7 +75,7 @@ async def send_sms(
         session.commit()
         session.refresh(message)
         return message
-    
+
     # Send via Twilio
     try:
         twilio_message = twilio_client.messages.create(

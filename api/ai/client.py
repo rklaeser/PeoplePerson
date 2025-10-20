@@ -3,10 +3,12 @@ import os
 import time
 import random
 import json
+import logging
 from typing import Type, TypeVar
 from pydantic import BaseModel
 from google import genai
 
+logger = logging.getLogger(__name__)
 T = TypeVar('T', bound=BaseModel)
 
 
@@ -62,6 +64,9 @@ Return ONLY the JSON object, no other text."""
                 # Extract JSON from response text
                 response_text = response.text.strip()
 
+                # Log the raw response for debugging
+                logger.debug(f"Gemini raw response (first 500 chars): {response_text[:500]}")
+
                 # Handle markdown code blocks if present
                 if response_text.startswith("```"):
                     # Remove code fence
@@ -77,19 +82,25 @@ Return ONLY the JSON object, no other text."""
                 last_error = e
                 error_str = str(e).lower()
 
+                # Log the error with attempt number
+                logger.error(f"Gemini API error (attempt {attempt + 1}/{max_retries}): {str(e)}")
+
                 # Handle rate limiting (429)
                 if "429" in error_str or "quota" in error_str or "rate limit" in error_str:
                     # Exponential backoff with jitter
                     wait_time = (2 ** attempt) + random.uniform(0, 1)
+                    logger.warning(f"Rate limited, waiting {wait_time:.1f}s before retry")
                     time.sleep(min(wait_time, 60))  # Cap at 60 seconds
 
                 # Handle server errors (500, 503)
                 elif "500" in error_str or "503" in error_str or "server error" in error_str:
                     # Fixed 2 second retry
+                    logger.warning(f"Server error, waiting 2s before retry")
                     time.sleep(2)
 
                 else:
-                    # Other errors - raise immediately
+                    # Other errors - log and raise immediately
+                    logger.error(f"Non-retryable error: {str(e)}")
                     raise
 
         # All retries failed

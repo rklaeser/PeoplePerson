@@ -43,3 +43,10 @@ variable "twilio_phone_number" {
   type        = string
   sensitive   = true
 }
+
+# AI/ML Variables
+variable "gemini_api_key" {
+  description = "Google Gemini API Key for AI features"
+  type        = string
+  sensitive   = true
+}

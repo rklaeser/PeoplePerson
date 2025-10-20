@@ -71,10 +71,20 @@ resource "google_cloud_run_v2_service" "peopleperson_api" {
         }
       }
 
+      env {
+        name = "GEMINI_API_KEY"
+        value_source {
+          secret_key_ref {
+            secret  = "gemini-api-key"
+            version = "latest"
+          }
+        }
+      }
+
       resources {
         limits = {
           cpu    = "1"
-          memory = "512Mi"
+          memory = "1Gi"
         }
       }
 

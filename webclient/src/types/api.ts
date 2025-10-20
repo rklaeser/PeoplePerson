@@ -40,6 +40,9 @@ export interface Person {
   health_status: 'healthy' | 'warning' | 'dormant'
   health_emoji: string
   days_since_contact: number
+
+  // Tags
+  tags: Tag[]
 }
 
 export interface PersonCreate {
@@ -52,6 +55,9 @@ export interface PersonCreate {
   email?: string
   phone_number?: string
   last_contact_date?: string
+  street_address?: string
+  city?: string
+  state?: string
 }
 
 export interface PersonUpdate {
@@ -189,12 +195,44 @@ export interface DuplicateWarning {
   similarity: number
 }
 
+// Single matched person from backend
+export interface PersonMatch {
+  person_id: string
+  person_name: string
+  similarity: number
+}
+
+// Result of matching a name to existing people
+export interface PersonMatchResult {
+  extracted_name: string
+  matches: PersonMatch[]  // Empty if no matches found
+  is_ambiguous: boolean   // True if multiple matches found
+}
+
+export interface TagAssignmentMatch {
+  tag_name: string
+  operation: string
+  matched_people: PersonMatchResult[]
+}
+
+export interface MemoryUpdateMatch {
+  matched_person: PersonMatchResult
+  entry_content: string
+  parsed_date: string  // ISO format date
+}
+
 export interface ExtractionResponse {
-  intent: 'create' | 'read' | 'update' | 'none'
+  intent: 'create' | 'read' | 'update_tag' | 'update_memory' | 'update' | 'none'
   message?: string
   people?: PersonExtraction[]
   duplicates?: DuplicateWarning[]
   created_persons?: Person[]  // Actual Person objects created by the backend
+
+  // For tag operations
+  tag_assignments?: TagAssignmentMatch[]
+
+  // For memory entries
+  memory_updates?: MemoryUpdateMatch[]
 }
 
 export interface NarrativeRequest {
@@ -205,6 +243,19 @@ export interface ConfirmPersonRequest {
   extraction: PersonExtraction
   action: 'create_new' | 'link_existing'
   existing_id?: string
+}
+
+export interface ConfirmTagAssignmentRequest {
+  tag_name: string
+  operation: string  // "add"
+  person_ids: string[]
+}
+
+export interface ConfirmMemoryEntryRequest {
+  person_id?: string
+  person_name?: string  // Used when creating new person
+  content: string
+  date: string  // ISO format
 }
 
 // Map view types

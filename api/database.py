@@ -5,17 +5,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Try to get database URL from environment, use SQLite as fallback for testing
+# Get database URL from environment (required)
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
-    print("Warning: DATABASE_URL not set, using SQLite for development")
-    DATABASE_URL = "sqlite:///./peopleperson.db"
+    raise ValueError("DATABASE_URL environment variable is required")
 
-# Create engine with appropriate settings
-if DATABASE_URL.startswith("sqlite"):
-    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False}, echo=True)
-else:
-    engine = create_engine(DATABASE_URL, echo=True)
+# Create engine
+engine = create_engine(DATABASE_URL, echo=True)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, class_=Session)
 

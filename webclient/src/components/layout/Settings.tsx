@@ -10,7 +10,7 @@ interface SettingsProps {
 }
 
 export function Settings({ isOpen, onClose }: SettingsProps) {
-  const { defaultLocation, setDefaultLocation } = useUIStore()
+  const { defaultLocation, setDefaultLocation, assistantName, setAssistantName } = useUIStore()
   const [city, setCity] = useState(defaultLocation?.city || '')
   const [state, setState] = useState(defaultLocation?.state || '')
   const [isSaving, setIsSaving] = useState(false)
@@ -90,7 +90,66 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
           </div>
 
           {/* Content */}
-          <div className="p-4 space-y-4">
+          <div className="p-4 space-y-6">
+            {/* Assistant Selection */}
+            <div>
+              <h3 className="text-sm font-medium mb-3">Animal Guide</h3>
+              <p className="text-xs text-muted-foreground mb-3">
+                Your animal guide helps you stay connected with the people in your life. Chat with them to add friends, update tags, record memories, and more.
+              </p>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setAssistantName('Scout')}
+                  className={`flex-1 p-4 rounded-lg border-2 transition-all ${
+                    assistantName === 'Scout'
+                      ? 'border-blue-500 bg-blue-500/10'
+                      : 'border-border hover:border-blue-300'
+                  }`}
+                >
+                  <div className="flex flex-col items-center gap-2">
+                    <img
+                      src="/scout.png"
+                      alt="Scout"
+                      className="w-16 h-16 rounded-full object-cover"
+                    />
+                    <div className="text-center">
+                      <div className="font-medium text-sm">Scout</div>
+                      <div className="text-xs text-muted-foreground">"Bark"</div>
+                    </div>
+                    {assistantName === 'Scout' && (
+                      <span className="text-blue-600 text-lg">✓</span>
+                    )}
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => setAssistantName('Nico')}
+                  className={`flex-1 p-4 rounded-lg border-2 transition-all ${
+                    assistantName === 'Nico'
+                      ? 'border-blue-500 bg-blue-500/10'
+                      : 'border-border hover:border-blue-300'
+                  }`}
+                >
+                  <div className="flex flex-col items-center gap-2">
+                    <img
+                      src="/nico.png"
+                      alt="Nico"
+                      className="w-16 h-16 rounded-full object-cover"
+                    />
+                    <div className="text-center">
+                      <div className="font-medium text-sm">Nico</div>
+                      <div className="text-xs text-muted-foreground">"Purr"</div>
+                    </div>
+                    {assistantName === 'Nico' && (
+                      <span className="text-blue-600 text-lg">✓</span>
+                    )}
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {/* Map Location */}
             <div>
               <h3 className="text-sm font-medium mb-3">Default Map Location</h3>
               <p className="text-xs text-muted-foreground mb-3">

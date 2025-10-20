@@ -6,43 +6,57 @@ INTENT_DETECTION_PROMPT = """You are an intent classifier for a contact manageme
 Classify the user's message into one of these intents:
 - CREATE: User wants to add new contacts (keywords: "met", "add", "new", "create" + person names)
 - READ: User wants to view contact information (keywords: "show", "find", "who is", "tell me about")
-- UPDATE: User wants to modify existing contacts (keywords: "change", "update", "edit", "modify")
+- UPDATE_TAG: User wants to add tags to existing people (keywords: "tag", "add tag", "part of")
+- UPDATE_MEMORY: User wants to add a memory entry about existing people (keywords: "I saw", "had coffee with", about existing people)
+- UPDATE: User wants to modify existing contact details (keywords: "change", "update", "edit", "modify" + specific fields)
 - NONE: Everything else (greetings, chitchat, questions, unrelated topics)
 
 Examples:
 
 Input: "I met Sarah at the tech conference yesterday. She's a designer from Portland."
-Intent: CREATE
+Intent: create
 
 Input: "Just had coffee with Tom and Jane. Tom rides a motorcycle and Jane plays banjo."
-Intent: CREATE
+Intent: create
 
 Input: "Add a new contact named Alex who works at Google"
-Intent: CREATE
+Intent: create
 
 Input: "Show me Tom's contact information"
-Intent: READ
+Intent: read
 
 Input: "Who is Sarah?"
-Intent: READ
+Intent: read
+
+Input: "TJ and Jane are part of Noisebridge. Add the tag."
+Intent: update_tag
+
+Input: "Add Sarah and Tom to the Work tag"
+Intent: update_tag
+
+Input: "I saw Michael Wu today. He went for a run in Golden Gate Park."
+Intent: update_memory
+
+Input: "Had coffee with Sarah yesterday. She mentioned her new job at Google."
+Intent: update_memory
 
 Input: "Update Jane's email to jane@example.com"
-Intent: UPDATE
+Intent: update
 
 Input: "Change Tom's phone number"
-Intent: UPDATE
+Intent: update
 
 Input: "What's the weather like today?"
-Intent: NONE
+Intent: none
 
 Input: "Hello! How are you?"
-Intent: NONE
+Intent: none
 
 Input: "Tell me a joke"
-Intent: NONE
+Intent: none
 
 Input: "I'm thinking about meeting someone tomorrow"
-Intent: NONE
+Intent: none
 
 Now classify this message:
 
@@ -108,3 +122,76 @@ Now extract people from this narrative:
 "{narrative}"
 
 Extract all people with their attributes."""
+
+
+# Tag Assignment Extraction Prompt
+TAG_ASSIGNMENT_EXTRACTION_PROMPT = """Extract tag assignment operations from the user's message.
+
+For each tag assignment, extract:
+- people_names: List of people's names mentioned
+- tag_name: The tag to add
+- operation: Always "add" (we only support adding tags for now)
+
+Examples:
+
+Input: "TJ, Jane, and Dali are all part of Noisebridge. Please add the tag."
+Output:
+- people_names: ["TJ", "Jane", "Dali"]
+  tag_name: "Noisebridge"
+  operation: "add"
+
+Input: "Add Sarah and Tom to the Work tag"
+Output:
+- people_names: ["Sarah", "Tom"]
+  tag_name: "Work"
+  operation: "add"
+
+Input: "Tag Michael as a friend"
+Output:
+- people_names: ["Michael"]
+  tag_name: "friend"
+  operation: "add"
+
+Now extract tag assignments from this message:
+
+"{narrative}"
+
+Extract all tag assignment operations."""
+
+
+# Memory Entry Extraction Prompt
+JOURNAL_ENTRY_EXTRACTION_PROMPT = """Extract memory entries about people from the user's message.
+
+For each memory entry, extract:
+- person_name: The person's name
+- entry_content: What happened or was said (in past tense, concise)
+- date: "today" if not specified, otherwise extract relative date
+
+Examples:
+
+Input: "I saw Michael Wu today. He went for a run in Golden Gate Park. He's dating. He tripped."
+Output:
+- person_name: "Michael Wu"
+  entry_content: "went for a run in Golden Gate Park, is dating, tripped"
+  date: "today"
+
+Input: "Had coffee with Sarah yesterday. She mentioned her new job at Google."
+Output:
+- person_name: "Sarah"
+  entry_content: "had coffee together, mentioned new job at Google"
+  date: "yesterday"
+
+Input: "I saw Tom and Jane at the park. Tom was on his motorcycle and Jane was playing banjo."
+Output:
+- person_name: "Tom"
+  entry_content: "saw at the park, was on his motorcycle"
+  date: "today"
+- person_name: "Jane"
+  entry_content: "saw at the park, was playing banjo"
+  date: "today"
+
+Now extract memory entries from this message:
+
+"{narrative}"
+
+Extract all memory entry information."""

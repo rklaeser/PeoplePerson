@@ -1,0 +1,7 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-f', 'Dockerfile', '-t', 'gcr.io/peopleperson-app/peopleperson-api:staging', '.']
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/peopleperson-app/peopleperson-api:staging']
+images:
+  - 'gcr.io/peopleperson-app/peopleperson-api:staging'

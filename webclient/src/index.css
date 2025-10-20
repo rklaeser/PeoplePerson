@@ -71,7 +71,14 @@
 .app-layout-table {
   display: flex;
   height: 100vh;
+  width: 100vw;
   overflow: hidden;
+}
+
+.app-layout-table > * {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
 }
 
 @media (max-width: 1024px) {
@@ -101,4 +108,14 @@
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   @apply bg-muted-foreground/30;
+}
+
+/* Hidden scrollbar (still scrollable) */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari, Opera */
 }

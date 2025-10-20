@@ -7,6 +7,8 @@ import {
   MessageCreate,
   NarrativeRequest,
   ConfirmPersonRequest,
+  ConfirmTagAssignmentRequest,
+  ConfirmMemoryEntryRequest,
   NotebookEntryCreate,
   NotebookEntryUpdate,
   TagCreate,
@@ -92,13 +94,44 @@ export const useDeletePerson = () => {
 
   return useMutation({
     mutationFn: (id: string) => api.deletePerson(id),
+    onMutate: async (id) => {
+      // Cancel any outgoing refetches to avoid race conditions
+      await queryClient.cancelQueries({ queryKey: queryKeys.person(id) })
+      await queryClient.cancelQueries({ queryKey: ['people'] })
+
+      // Snapshot the previous values for rollback
+      const previousPerson = queryClient.getQueryData(queryKeys.person(id))
+      const previousPeople = queryClient.getQueryData(['people'])
+
+      // Optimistically remove the person from all people lists
+      queryClient.setQueriesData(
+        { queryKey: ['people'] },
+        (old: any) => {
+          if (!old) return old
+          return old.filter((p: any) => p.id !== id)
+        }
+      )
+
+      return { previousPerson, previousPeople }
+    },
+    onError: (err, id, context) => {
+      // Rollback to previous state on error
+      if (context?.previousPeople) {
+        queryClient.setQueryData(['people'], context.previousPeople)
+      }
+      if (context?.previousPerson) {
+        queryClient.setQueryData(queryKeys.person(id), context.previousPerson)
+      }
+    },
     onSuccess: (_, id) => {
-      // Remove from cache
+      // Remove all related queries from cache
       queryClient.removeQueries({ queryKey: queryKeys.person(id) })
-      // Invalidate people list
-      queryClient.invalidateQueries({ queryKey: ['people'] })
-      // Remove messages
       queryClient.removeQueries({ queryKey: queryKeys.messages(id) })
+      queryClient.removeQueries({ queryKey: queryKeys.notebookEntries(id) })
+      queryClient.removeQueries({ queryKey: queryKeys.personTags(id) })
+
+      // Invalidate people list to ensure consistency
+      queryClient.invalidateQueries({ queryKey: ['people'] })
     },
   })
 }
@@ -312,6 +345,37 @@ export const useConfirmPerson = () => {
       queryClient.invalidateQueries({ queryKey: ['people'] })
       // Add to cache
       queryClient.setQueryData(queryKeys.person(newPerson.id), newPerson)
+    },
+  })
+}
+
+export const useConfirmTagAssignment = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: ConfirmTagAssignmentRequest) => api.confirmTagAssignment(data),
+    onSuccess: () => {
+      // Invalidate people list to show updated tags
+      queryClient.invalidateQueries({ queryKey: ['people'] })
+      // Invalidate tags list
+      queryClient.invalidateQueries({ queryKey: ['tags'] })
+    },
+  })
+}
+
+export const useConfirmMemoryEntry = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: ConfirmMemoryEntryRequest) => api.confirmMemoryEntry(data),
+    onSuccess: (response, variables) => {
+      // If person_id exists, invalidate specific person queries
+      if (variables.person_id) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.notebookEntries(variables.person_id) })
+        queryClient.invalidateQueries({ queryKey: queryKeys.person(variables.person_id) })
+      }
+      // Always invalidate people list (for both new and existing people)
+      queryClient.invalidateQueries({ queryKey: ['people'] })
     },
   })
 }

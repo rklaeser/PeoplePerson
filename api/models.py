@@ -254,6 +254,9 @@ class PersonRead(PersonBase):
     health_emoji: str = "🌳"
     days_since_contact: int = 0
 
+    # Tags
+    tags: List["TagRead"] = []
+
 
 class TagCreate(TagBase):
     pass

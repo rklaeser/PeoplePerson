@@ -14,8 +14,7 @@ from ai.extractor import (
     PersonManager,
     PersonExtraction,
     CRUDIntent,
-    IntentAnalysis,
-    DuplicateWarning
+    IntentAnalysis
 )
 from models import Person, User
 
@@ -190,77 +189,125 @@ class TestFieldValidation:
             )
 
 
-class TestDuplicateDetection:
-    """Test duplicate detection functionality."""
+class TestNameMatching:
+    """Test name matching functionality."""
 
-    def test_find_similar_exact_match(self, db_session, test_user):
-        """Test finding exact name match."""
+    def test_find_by_name_exact_match(self, db_session, test_user):
+        """Test finding exact name match (case-insensitive)."""
         # Create existing person
         existing = Person(
             name="Tom",
             body="blonde hair, rides a motorcycle",
-            user_id=test_user.id,
-            intent="new"
+            user_id=test_user.id
         )
         db_session.add(existing)
         db_session.commit()
 
-        # Test similarity
+        # Test exact match
         manager = PersonManager(db_session)
-        result = manager.find_similar("Tom", test_user.id)
+        results = manager.find_by_name("Tom", test_user.id)
 
-        assert result is not None
-        person, similarity = result
-        assert person.name == "Tom"
-        assert similarity >= 0.85
+        assert len(results) == 1
+        assert results[0].name == "Tom"
 
-    def test_find_similar_close_match(self, db_session, test_user):
-        """Test finding similar name."""
+    def test_find_by_name_case_insensitive(self, db_session, test_user):
+        """Test case-insensitive matching."""
+        # Create existing person
+        existing = Person(
+            name="Tom",
+            body="software engineer",
+            user_id=test_user.id
+        )
+        db_session.add(existing)
+        db_session.commit()
+
+        # Test with different case
+        manager = PersonManager(db_session)
+        results = manager.find_by_name("tom", test_user.id)
+
+        assert len(results) == 1
+        assert results[0].name == "Tom"
+
+    def test_find_by_name_starts_with(self, db_session, test_user):
+        """Test matching names that start with search term."""
         # Create existing person
         existing = Person(
             name="Thomas",
-            body="software engineer",
-            user_id=test_user.id,
-            intent="new"
+            body="designer",
+            user_id=test_user.id
         )
         db_session.add(existing)
         db_session.commit()
 
-        # Test similarity with "Tom"
+        # Test starts with
         manager = PersonManager(db_session)
-        result = manager.find_similar("Tom", test_user.id)
+        results = manager.find_by_name("Tom", test_user.id)
 
-        # Thomas and Tom might or might not be similar enough
-        # This test documents the behavior
-        if result:
-            person, similarity = result
-            assert person.name == "Thomas"
-            assert similarity >= 0.85
+        assert len(results) == 1
+        assert results[0].name == "Thomas"
 
-    def test_find_similar_no_match(self, db_session, test_user):
+    def test_find_by_name_contains(self, db_session, test_user):
+        """Test matching names that contain search term."""
+        # Create existing person
+        existing = Person(
+            name="Sarah Johnson",
+            body="designer",
+            user_id=test_user.id
+        )
+        db_session.add(existing)
+        db_session.commit()
+
+        # Test contains
+        manager = PersonManager(db_session)
+        results = manager.find_by_name("Johnson", test_user.id)
+
+        assert len(results) == 1
+        assert results[0].name == "Sarah Johnson"
+
+    def test_find_by_name_no_match(self, db_session, test_user):
         """Test finding no match for different name."""
         # Create existing person
         existing = Person(
             name="Sarah",
             body="designer",
-            user_id=test_user.id,
-            intent="new"
+            user_id=test_user.id
         )
         db_session.add(existing)
         db_session.commit()
 
-        # Test similarity with very different name
+        # Test with unrelated name
         manager = PersonManager(db_session)
-        result = manager.find_similar("Alexander", test_user.id)
+        results = manager.find_by_name("Alexander", test_user.id)
 
-        assert result is None
+        assert len(results) == 0
 
-    def test_find_similar_no_existing_people(self, db_session, test_user):
+    def test_find_by_name_no_existing_people(self, db_session, test_user):
         """Test when no people exist yet."""
         manager = PersonManager(db_session)
-        result = manager.find_similar("Tom", test_user.id)
+        results = manager.find_by_name("Tom", test_user.id)
 
-        assert result is None
+        assert len(results) == 0
+
+    def test_find_by_name_priority_order(self, db_session, test_user):
+        """Test that exact matches come before partial matches."""
+        # Create multiple people
+        exact = Person(name="Tom", body="", user_id=test_user.id)
+        starts_with = Person(name="Tommy", body="", user_id=test_user.id)
+        contains = Person(name="John Tomson", body="", user_id=test_user.id)
+
+        db_session.add(exact)
+        db_session.add(starts_with)
+        db_session.add(contains)
+        db_session.commit()
+
+        # Test priority ordering
+        manager = PersonManager(db_session)
+        results = manager.find_by_name("Tom", test_user.id)
+
+        assert len(results) == 3
+        assert results[0].name == "Tom"  # Exact match first
+        assert results[1].name == "Tommy"  # Starts with second
+        assert results[2].name == "John Tomson"  # Contains third
 
 
 class TestPersonManager:
@@ -279,9 +326,8 @@ class TestPersonManager:
         person = manager.create_person(extraction, test_user.id)
 
         assert person.name == "Tom"
-        assert person.body == "blonde hair, rides a motorcycle"
+        assert person.body == ""  # Body is deprecated, uses notebook entries now
         assert person.phone_number == "415-555-0123"
-        assert person.intent == "new"
         assert person.user_id == test_user.id
         assert person.id is not None
 
@@ -293,23 +339,21 @@ class TestPersonManager:
         person = manager.create_person(extraction, test_user.id)
 
         assert person.name == "Jane"
-        assert person.body == "Add a description"
-        assert person.intent == "new"
+        assert person.body == ""
 
     def test_link_to_existing(self, db_session, test_user):
         """Test linking extraction to existing person."""
         # Create existing person
         existing = Person(
             name="Tom",
-            body="blonde hair",
-            user_id=test_user.id,
-            intent="new"
+            body="",
+            user_id=test_user.id
         )
         db_session.add(existing)
         db_session.commit()
         db_session.refresh(existing)
 
-        # Link new extraction
+        # Link new extraction - should append to today's notebook entry
         extraction = PersonExtraction(
             name="Tom",
             attributes="rides a motorcycle"
@@ -319,8 +363,8 @@ class TestPersonManager:
         updated = manager.link_to_existing(extraction, existing.id)
 
         assert updated.id == existing.id
-        assert "blonde hair" in updated.body
-        assert "rides a motorcycle" in updated.body
+        # Attributes are now stored in notebook entries, not body
+        assert updated.body == ""
 
     def test_link_to_existing_not_found(self, db_session, test_user):
         """Test linking to non-existent person raises error."""

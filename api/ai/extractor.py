@@ -1,22 +1,28 @@
 """Entity extraction and person management for NLP-powered contact creation."""
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from uuid import UUID
 from pydantic import BaseModel, field_validator, EmailStr
 from sqlmodel import Session, select
-from sentence_transformers import SentenceTransformer
 
-from models import Person, NotebookEntry
+from models import Person, NotebookEntry, Tag, PersonTag
 from ai.client import GeminiClient
-from ai.prompts import INTENT_DETECTION_PROMPT, ENTITY_EXTRACTION_PROMPT
+from ai.prompts import (
+    INTENT_DETECTION_PROMPT,
+    ENTITY_EXTRACTION_PROMPT,
+    TAG_ASSIGNMENT_EXTRACTION_PROMPT,
+    JOURNAL_ENTRY_EXTRACTION_PROMPT
+)
 
 
 class CRUDIntent(str, Enum):
     """Intent classification for user messages."""
     CREATE = "create"
     READ = "read"
+    UPDATE_TAG = "update_tag"
+    UPDATE_MEMORY = "update_memory"
     UPDATE = "update"
     NONE = "none"
 
@@ -74,13 +80,46 @@ class PersonExtraction(BaseModel):
         return v
 
 
-class DuplicateWarning(BaseModel):
-    """Warning about potential duplicate person."""
-    extraction: PersonExtraction
-    existing_id: UUID
-    existing_name: str
-    existing_notes: Optional[str] = None
-    similarity: float
+class TagAssignment(BaseModel):
+    """Extracted tag assignment from text."""
+    people_names: List[str]
+    tag_name: str
+    operation: str = "add"
+
+
+class MemoryUpdate(BaseModel):
+    """Extracted memory entry for existing person."""
+    person_name: str
+    entry_content: str
+    date: Optional[str] = "today"
+
+
+class PersonMatch(BaseModel):
+    """Single matched person."""
+    person_id: UUID
+    person_name: str
+    similarity: float = 1.0
+
+
+class PersonMatchResult(BaseModel):
+    """Result of matching extracted name to existing people."""
+    extracted_name: str
+    matches: List[PersonMatch] = []  # Empty if no matches found
+    is_ambiguous: bool = False  # True if multiple matches found
+
+
+class TagAssignmentMatch(BaseModel):
+    """Matched tag assignment ready for confirmation."""
+    tag_name: str
+    operation: str
+    matched_people: List[PersonMatchResult]
+
+
+class MemoryUpdateMatch(BaseModel):
+    """Matched memory update ready for confirmation."""
+    matched_person: PersonMatchResult
+    entry_content: str
+    parsed_date: str  # ISO format date
 
 
 class ExtractionResponse(BaseModel):
@@ -88,8 +127,13 @@ class ExtractionResponse(BaseModel):
     intent: CRUDIntent
     message: Optional[str] = None
     people: Optional[List[PersonExtraction]] = None
-    duplicates: Optional[List[DuplicateWarning]] = None
     created_persons: Optional[List[dict]] = None  # List of created Person objects as dicts
+
+    # For tag operations
+    tag_assignments: Optional[List[TagAssignmentMatch]] = None
+
+    # For memory entries
+    memory_updates: Optional[List[MemoryUpdateMatch]] = None
 
 
 class PersonExtractor:
@@ -130,15 +174,48 @@ class PersonExtractor:
         result = self.client.generate_structured(prompt, ExtractionResult)
         return result.people
 
+    def extract_tag_assignments(self, narrative: str) -> List[TagAssignment]:
+        """
+        Extract tag assignment operations from text.
+
+        Args:
+            narrative: Text containing tag assignments
+
+        Returns:
+            List of TagAssignment objects
+        """
+        prompt = TAG_ASSIGNMENT_EXTRACTION_PROMPT.format(narrative=narrative)
+
+        class TagAssignmentResult(BaseModel):
+            assignments: List[TagAssignment]
+
+        result = self.client.generate_structured(prompt, TagAssignmentResult)
+        return result.assignments
+
+    def extract_memory_entries(self, narrative: str) -> List[MemoryUpdate]:
+        """
+        Extract memory entries about existing people.
+
+        Args:
+            narrative: Text containing memory updates
+
+        Returns:
+            List of MemoryUpdate objects
+        """
+        prompt = JOURNAL_ENTRY_EXTRACTION_PROMPT.format(narrative=narrative)
+
+        class MemoryResult(BaseModel):
+            entries: List[MemoryUpdate]
+
+        result = self.client.generate_structured(prompt, MemoryResult)
+        return result.entries
+
 
 class PersonManager:
-    """Manages person creation and duplicate detection."""
+    """Manages person creation and name matching."""
 
     def __init__(self, session: Session):
         self.session = session
-        # Initialize sentence transformer for similarity
-        self.model = SentenceTransformer('all-mpnet-base-v2')
-        self.duplicate_threshold = 0.85
 
     def get_or_create_today_entry(
         self,
@@ -178,49 +255,46 @@ class PersonManager:
 
         return entry
 
-    def find_similar(self, name: str, user_id: UUID) -> Optional[tuple[Person, float]]:
+    def find_by_name(self, name: str, user_id: UUID) -> List[Person]:
         """
-        Find similar existing person for duplicate detection.
+        Find people by name using simple case-insensitive matching.
 
         Args:
             name: Name to search for
             user_id: User ID to scope the search
 
         Returns:
-            Tuple of (Person, similarity_score) if similar person found, None otherwise
+            List of Person objects, sorted by match quality:
+            1. Exact match (case-insensitive)
+            2. Starts with the search term
+            3. Contains the search term
         """
         # Get all people for this user
         statement = select(Person).where(Person.user_id == user_id)
         existing_people = self.session.exec(statement).all()
 
         if not existing_people:
-            return None
+            return []
 
-        # Encode the query name
-        query_embedding = self.model.encode([name])[0]
+        name_lower = name.lower().strip()
 
-        # Find most similar person
-        best_match = None
-        best_similarity = 0.0
+        # Categorize matches
+        exact_matches = []
+        starts_with_matches = []
+        contains_matches = []
 
         for person in existing_people:
-            person_embedding = self.model.encode([person.name])[0]
+            person_name_lower = person.name.lower()
 
-            # Calculate cosine similarity
-            similarity = float(
-                query_embedding.dot(person_embedding) /
-                (sum(query_embedding**2)**0.5 * sum(person_embedding**2)**0.5)
-            )
+            if person_name_lower == name_lower:
+                exact_matches.append(person)
+            elif person_name_lower.startswith(name_lower):
+                starts_with_matches.append(person)
+            elif name_lower in person_name_lower:
+                contains_matches.append(person)
 
-            if similarity > best_similarity:
-                best_similarity = similarity
-                best_match = person
-
-        # Return match if above threshold
-        if best_match and best_similarity >= self.duplicate_threshold:
-            return (best_match, best_similarity)
-
-        return None
+        # Return matches in priority order
+        return exact_matches + starts_with_matches + contains_matches
 
     def create_person(
         self,
@@ -241,7 +315,6 @@ class PersonManager:
             name=extraction.name,
             body="",  # Deprecated - use notebook_entries instead
             user_id=user_id,
-            intent="new",  # All AI-created persons start with intent="new"
             email=extraction.email,
             phone_number=extraction.phone_number
         )
@@ -305,3 +378,183 @@ class PersonManager:
         self.session.refresh(person)
 
         return person
+
+    def match_person(self, name: str, user_id: UUID) -> PersonMatchResult:
+        """
+        Match extracted name to existing people using case-insensitive search.
+
+        Returns all matches so frontend can handle disambiguation when needed.
+
+        Args:
+            name: Name to match
+            user_id: User ID to scope the search
+
+        Returns:
+            PersonMatchResult with all matches, or empty if none found
+        """
+        people = self.find_by_name(name, user_id)
+
+        if not people:
+            # No matches found
+            return PersonMatchResult(
+                extracted_name=name,
+                matches=[],
+                is_ambiguous=False
+            )
+
+        # Convert to PersonMatch objects
+        matches = []
+        for person in people:
+            # Use 1.0 for exact match, 0.8 for partial matches
+            similarity = 1.0 if person.name.lower() == name.lower() else 0.8
+            matches.append(PersonMatch(
+                person_id=person.id,
+                person_name=person.name,
+                similarity=similarity
+            ))
+
+        return PersonMatchResult(
+            extracted_name=name,
+            matches=matches,
+            is_ambiguous=len(matches) > 1
+        )
+
+    def assign_tags(
+        self,
+        person_ids: List[UUID],
+        tag_name: str,
+        user_id: UUID
+    ) -> Tuple[Tag, List[Person]]:
+        """
+        Assign tag to multiple people (creates tag if doesn't exist).
+
+        Args:
+            person_ids: List of person IDs
+            tag_name: Name of tag to assign
+            user_id: User ID
+
+        Returns:
+            Tuple of (Tag, List of updated Person objects)
+        """
+        # Get or create tag
+        statement = select(Tag).where(
+            Tag.user_id == user_id,
+            Tag.name == tag_name
+        )
+        tag = self.session.exec(statement).first()
+
+        if not tag:
+            tag = Tag(
+                name=tag_name,
+                user_id=user_id,
+                category="general"
+            )
+            self.session.add(tag)
+            self.session.commit()
+            self.session.refresh(tag)
+
+        # Assign tag to each person
+        updated_people = []
+        for person_id in person_ids:
+            # Check if PersonTag already exists
+            pt_statement = select(PersonTag).where(
+                PersonTag.person_id == person_id,
+                PersonTag.tag_id == tag.id
+            )
+            existing_pt = self.session.exec(pt_statement).first()
+
+            if not existing_pt:
+                # Create PersonTag relationship
+                person_tag = PersonTag(
+                    person_id=person_id,
+                    tag_id=tag.id
+                )
+                self.session.add(person_tag)
+
+            # Get person to return
+            person = self.session.get(Person, person_id)
+            if person:
+                updated_people.append(person)
+
+        self.session.commit()
+
+        return tag, updated_people
+
+    def add_journal_entry(
+        self,
+        person_id: UUID,
+        content: str,
+        date: str  # ISO format
+    ) -> NotebookEntry:
+        """
+        Add journal entry for a person on a specific date.
+
+        Args:
+            person_id: ID of the person
+            content: Journal entry content
+            date: Date in ISO format (YYYY-MM-DD)
+
+        Returns:
+            NotebookEntry object
+        """
+        # Get or create entry for date
+        statement = select(NotebookEntry).where(
+            NotebookEntry.person_id == person_id,
+            NotebookEntry.entry_date == date
+        )
+        entry = self.session.exec(statement).first()
+
+        person = self.session.get(Person, person_id)
+        if not person:
+            raise ValueError(f"Person with id {person_id} not found")
+
+        if not entry:
+            entry = NotebookEntry(
+                person_id=person_id,
+                user_id=person.user_id,
+                entry_date=date,
+                content=content
+            )
+        else:
+            # Append to existing entry
+            if entry.content:
+                entry.content = f"{entry.content}\n{content}"
+            else:
+                entry.content = content
+
+        entry.updated_at = datetime.utcnow()
+        self.session.add(entry)
+
+        # Update last_contact_date if entry is for today
+        if date == datetime.utcnow().date().isoformat():
+            person.last_contact_date = datetime.utcnow()
+            self.session.add(person)
+
+        self.session.commit()
+        self.session.refresh(entry)
+
+        return entry
+
+
+def parse_relative_date(date_str: Optional[str]) -> str:
+    """
+    Parse relative dates to ISO format.
+
+    Args:
+        date_str: Date string ("today", "yesterday", or ISO date)
+
+    Returns:
+        ISO format date string (YYYY-MM-DD)
+    """
+    if not date_str or date_str.lower() == "today":
+        return datetime.utcnow().date().isoformat()
+
+    if date_str.lower() == "yesterday":
+        return (datetime.utcnow().date() - timedelta(days=1)).isoformat()
+
+    # Try to parse as ISO date
+    try:
+        return datetime.fromisoformat(date_str).date().isoformat()
+    except Exception:
+        # Default to today if can't parse
+        return datetime.utcnow().date().isoformat()

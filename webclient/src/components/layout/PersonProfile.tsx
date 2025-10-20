@@ -1,12 +1,12 @@
-import { useState } from 'react'
-import { usePerson, useUpdatePerson, useNotebookEntries, useCreateNotebookEntry, useUpdateNotebookEntry, useDeleteNotebookEntry, useMarkAsContacted, usePersonTags, useAddTagToPerson, useRemoveTagFromPerson, useTags } from '@/hooks/api-hooks'
+import { useState, useEffect } from 'react'
+import { usePerson, useUpdatePerson, useDeletePerson, usePeople, useNotebookEntries, useCreateNotebookEntry, useUpdateNotebookEntry, useDeleteNotebookEntry, useMarkAsContacted, usePersonTags, useAddTagToPerson, useRemoveTagFromPerson, useTags } from '@/hooks/api-hooks'
 import { Avatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { HealthScore } from '@/components/HealthScore'
-import { cn } from '@/lib/utils'
-import { Edit, Phone, MapPin, Calendar, Brain, X, Check, Plus, Trash2, MessageCircle, Tag as TagIcon } from 'lucide-react'
+import { Edit, Phone, MapPin, Calendar, Brain, X, Check, Plus, Trash2, MessageCircle, Tag as TagIcon, PenLine } from 'lucide-react'
+import { useNavigate, useSearch } from '@tanstack/react-router'
 import type { PersonUpdate } from '@/types/api'
 
 interface PersonProfileProps {
@@ -14,8 +14,12 @@ interface PersonProfileProps {
 }
 
 export function PersonProfile({ personId }: PersonProfileProps) {
+  const navigate = useNavigate()
+  const search = useSearch({ strict: false }) as { edit?: string }
   const { data: person, isLoading } = usePerson(personId)
+  const { data: allPeople = [] } = usePeople({})
   const updatePerson = useUpdatePerson()
+  const deletePerson = useDeletePerson()
   const markAsContacted = useMarkAsContacted()
   const [isEditing, setIsEditing] = useState(false)
   const [formData, setFormData] = useState<PersonUpdate>({})
@@ -37,6 +41,22 @@ export function PersonProfile({ personId }: PersonProfileProps) {
   const removeTagFromPerson = useRemoveTagFromPerson()
   const [isAddingTag, setIsAddingTag] = useState(false)
   const [newTagName, setNewTagName] = useState('')
+
+  // Check if we should start in edit mode based on URL parameter
+  useEffect(() => {
+    if (search.edit === 'true' && person && !isEditing) {
+      setFormData({
+        name: person.name,
+        phone_number: person.phone_number || '',
+        street_address: person.street_address || '',
+        city: person.city || '',
+        state: person.state || '',
+        zip: person.zip || '',
+        birthday: person.birthday || '',
+      })
+      setIsEditing(true)
+    }
+  }, [search.edit, person, isEditing])
 
   // Filter available tags (not already assigned to this person)
   const availableTags = allTags.filter(
@@ -93,15 +113,17 @@ export function PersonProfile({ personId }: PersonProfileProps) {
   }
 
   const handleEdit = () => {
-    setFormData({
-      name: person.name,
-      phone_number: person.phone_number || '',
-      street_address: person.street_address || '',
-      city: person.city || '',
-      state: person.state || '',
-      zip: person.zip || '',
-      birthday: person.birthday || '',
-    })
+    if (person) {
+      setFormData({
+        name: person.name,
+        phone_number: person.phone_number || '',
+        street_address: person.street_address || '',
+        city: person.city || '',
+        state: person.state || '',
+        zip: person.zip || '',
+        birthday: person.birthday || '',
+      })
+    }
     setIsEditing(true)
   }
 
@@ -116,7 +138,7 @@ export function PersonProfile({ personId }: PersonProfileProps) {
       setIsEditing(false)
       setFormData({})
     } catch (error) {
-      console.error('Failed to update person:', error)
+      console.error('Failed to save person:', error)
     }
   }
 
@@ -213,80 +235,228 @@ export function PersonProfile({ personId }: PersonProfileProps) {
     await handleAddTag(tagName)
   }
 
+  const handleDelete = async () => {
+    if (!confirm(`Are you sure you want to delete ${person.name}? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      // Determine next navigation target before deleting
+      const remainingPeople = allPeople.filter(p => p.id !== personId)
+
+      // Delete first (with optimistic updates)
+      await deletePerson.mutateAsync(personId)
+
+      // Then navigate after successful deletion
+      if (remainingPeople.length > 0) {
+        navigate({
+          to: '/people/$personId',
+          params: { personId: remainingPeople[0].id },
+          search: { panel: 'profile' },
+          replace: true
+        })
+      } else {
+        // If no people left, go to empty people list
+        navigate({ to: '/people', replace: true })
+      }
+    } catch (error) {
+      console.error('Failed to delete person:', error)
+      // Error handling: optimistic update will be rolled back automatically
+    }
+  }
+
+  // Check if person has any contact information
+  const hasContactInfo = !!(
+    person.phone_number ||
+    person.street_address ||
+    person.city ||
+    person.state ||
+    person.zip ||
+    person.birthday
+  )
+
   return (
     <div className="flex-1 overflow-auto custom-scrollbar p-6">
       <div className="max-w-2xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-start gap-4">
-          <Avatar name={person.name} size={80} />
-          <div className="flex-1">
-            <div className="flex items-center justify-between mb-2">
-              {isEditing ? (
-                <Input
-                  value={formData.name || ''}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="text-2xl font-bold h-12"
-                  placeholder="Name"
-                />
-              ) : (
-                <h1 className="text-2xl font-bold">{person.name}</h1>
+        {/* Tags and Edit/Save buttons at top */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Display existing tags */}
+          {personTags.map((tag) => (
+            <div
+              key={tag.id}
+              className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full text-sm"
+            >
+              <span>{tag.name}</span>
+              <button
+                onClick={() => handleRemoveTag(tag.id)}
+                className="hover:text-destructive transition-colors"
+                disabled={removeTagFromPerson.isPending}
+              >
+                <X size={14} />
+              </button>
+            </div>
+          ))}
+
+          {/* Add Tag button */}
+          <button
+            onClick={() => setIsAddingTag(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-background border border-border rounded-full text-sm hover:bg-accent transition-colors"
+          >
+            <Plus size={14} />
+            Tag
+          </button>
+
+          {/* Spacer to push edit buttons to the right */}
+          <div className="flex-1" />
+
+          {/* Edit/Save buttons */}
+          {isEditing ? (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCancel}
+                disabled={updatePerson.isPending}
+              >
+                <X size={16} className="mr-2" />
+                Cancel
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleSave}
+                disabled={updatePerson.isPending}
+              >
+                <Check size={16} className="mr-2" />
+                Save
+              </Button>
+            </>
+          ) : (
+            <Button variant="outline" size="sm" onClick={handleEdit}>
+              <Edit size={16} className="mr-2" />
+              Edit
+            </Button>
+          )}
+        </div>
+
+        {/* Name editing - only show in edit mode */}
+        {isEditing && (
+          <div className="bg-card border border-border rounded-lg p-4">
+            <h2 className="text-lg font-semibold mb-4">Name</h2>
+            <Input
+              value={formData.name ?? person.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="Name"
+              className="text-lg"
+            />
+          </div>
+        )}
+
+        {/* Add tag interface - shown when adding tag */}
+        {isAddingTag && (
+          <div className="bg-card border border-border rounded-lg p-4">
+            <div className="space-y-4">
+              {/* Quick add - show available tags first */}
+              {!newTagName && availableTags.length > 0 && (
+                <div className="space-y-2">
+                  <div className="text-sm font-medium">Quick add</div>
+                  <div className="flex flex-wrap gap-2">
+                    {availableTags.slice(0, 15).map((tag) => (
+                      <button
+                        key={tag.id}
+                        onClick={() => handleQuickAddTag(tag.name)}
+                        disabled={addTagToPerson.isPending}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-secondary hover:bg-secondary/80 border border-border rounded-full text-sm transition-colors disabled:opacity-50"
+                      >
+                        <Plus size={12} />
+                        {tag.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               )}
-              <div className="flex gap-2">
-                {isEditing ? (
-                  <>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleCancel}
-                      disabled={updatePerson.isPending}
-                    >
-                      <X size={16} className="mr-2" />
-                      Cancel
-                    </Button>
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={handleSave}
-                      disabled={updatePerson.isPending}
-                    >
-                      <Check size={16} className="mr-2" />
-                      Save
-                    </Button>
-                  </>
-                ) : (
-                  <Button variant="outline" size="sm" onClick={handleEdit}>
-                    <Edit size={16} className="mr-2" />
-                    Edit
+
+              {/* Search or create */}
+              <div className="space-y-2">
+                <div className="text-sm font-medium">Search or create new</div>
+                <div className="flex gap-2">
+                  <Input
+                    value={newTagName}
+                    onChange={(e) => setNewTagName(e.target.value)}
+                    placeholder="Type to search (e.g., Noisebridge) or create new tag"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        if (suggestedTags.length === 1) {
+                          // If only one match, add that tag
+                          handleQuickAddTag(suggestedTags[0].name)
+                        } else {
+                          // Otherwise create new tag
+                          handleAddTag()
+                        }
+                      } else if (e.key === 'Escape') {
+                        setIsAddingTag(false)
+                        setNewTagName('')
+                      }
+                    }}
+                    autoFocus={availableTags.length === 0}
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setIsAddingTag(false)
+                      setNewTagName('')
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+
+                {/* Matching tags when typing */}
+                {newTagName && suggestedTags.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="text-xs text-muted-foreground font-medium">
+                      Matching tags - click to add
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {suggestedTags.map((tag) => (
+                        <button
+                          key={tag.id}
+                          onClick={() => handleQuickAddTag(tag.name)}
+                          disabled={addTagToPerson.isPending}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/20 hover:bg-primary/30 border border-primary/40 rounded-full text-sm font-medium transition-colors disabled:opacity-50"
+                        >
+                          <Plus size={12} />
+                          {tag.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Create new tag option */}
+                {newTagName && newTagName.trim() && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleAddTag()}
+                    disabled={addTagToPerson.isPending}
+                    className="w-full"
+                  >
+                    <Plus size={14} className="mr-2" />
+                    {suggestedTags.find(t => t.name.toLowerCase() === newTagName.toLowerCase())
+                      ? `Add "${newTagName}"`
+                      : `Create new tag "${newTagName}"`}
                   </Button>
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-3 mb-3">
-              <HealthScore
-                score={person.health_score}
-                status={person.health_status}
-                emoji={person.health_emoji}
-                daysSinceContact={person.days_since_contact}
-                size="md"
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleMarkAsContacted}
-                disabled={markAsContacted.isPending}
-              >
-                <MessageCircle size={16} className="mr-2" />
-                Mark as Contacted
-              </Button>
-            </div>
-            <div className="text-sm text-muted-foreground">
-              Added {new Date(person.created_at).toLocaleDateString()}
-            </div>
           </div>
-        </div>
+        )}
 
-        {/* Contact Information */}
-        <div className="bg-card border border-border rounded-lg p-4">
+        {/* Contact Information - only show if editing or has contact info */}
+        {(isEditing || hasContactInfo) && (
+          <div className="bg-card border border-border rounded-lg p-4">
           <h2 className="text-lg font-semibold mb-4">Contact Information</h2>
           <div className="space-y-3">
             {isEditing ? (
@@ -294,7 +464,7 @@ export function PersonProfile({ personId }: PersonProfileProps) {
                 <div className="flex items-center gap-3">
                   <Phone size={16} className="text-muted-foreground flex-shrink-0" />
                   <Input
-                    value={formData.phone_number || ''}
+                    value={formData.phone_number ?? person.phone_number ?? ''}
                     onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
                     placeholder="Phone number"
                     type="tel"
@@ -303,26 +473,26 @@ export function PersonProfile({ personId }: PersonProfileProps) {
                 <div className="flex items-center gap-3">
                   <MapPin size={16} className="text-muted-foreground flex-shrink-0" />
                   <Input
-                    value={formData.street_address || ''}
+                    value={formData.street_address ?? person.street_address ?? ''}
                     onChange={(e) => setFormData({ ...formData, street_address: e.target.value })}
                     placeholder="Street Address"
                   />
                 </div>
                 <div className="flex items-center gap-3 ml-8">
                   <Input
-                    value={formData.city || ''}
+                    value={formData.city ?? person.city ?? ''}
                     onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                     placeholder="City"
                     className="flex-1"
                   />
                   <Input
-                    value={formData.state || ''}
+                    value={formData.state ?? person.state ?? ''}
                     onChange={(e) => setFormData({ ...formData, state: e.target.value })}
                     placeholder="State"
                     className="w-20"
                   />
                   <Input
-                    value={formData.zip || ''}
+                    value={formData.zip ?? person.zip ?? ''}
                     onChange={(e) => setFormData({ ...formData, zip: e.target.value })}
                     placeholder="ZIP"
                     className="w-24"
@@ -331,7 +501,7 @@ export function PersonProfile({ personId }: PersonProfileProps) {
                 <div className="flex items-center gap-3">
                   <Calendar size={16} className="text-muted-foreground flex-shrink-0" />
                   <Input
-                    value={formData.birthday || ''}
+                    value={formData.birthday ?? person.birthday ?? ''}
                     onChange={(e) => setFormData({ ...formData, birthday: e.target.value })}
                     placeholder="Birthday"
                   />
@@ -339,13 +509,13 @@ export function PersonProfile({ personId }: PersonProfileProps) {
               </>
             ) : (
               <>
-                {person.phone_number && (
+                {person?.phone_number && (
                   <div className="flex items-center gap-3">
                     <Phone size={16} className="text-muted-foreground" />
                     <span>{person.phone_number}</span>
                   </div>
                 )}
-                {(person.street_address || person.city || person.state || person.zip) && (
+                {(person?.street_address || person?.city || person?.state || person?.zip) && (
                   <div className="flex items-center gap-3">
                     <MapPin size={16} className="text-muted-foreground flex-shrink-0" />
                     <div className="flex flex-col">
@@ -356,7 +526,7 @@ export function PersonProfile({ personId }: PersonProfileProps) {
                     </div>
                   </div>
                 )}
-                {person.birthday && (
+                {person?.birthday && (
                   <div className="flex items-center gap-3">
                     <Calendar size={16} className="text-muted-foreground" />
                     <span>{person.birthday}</span>
@@ -365,137 +535,21 @@ export function PersonProfile({ personId }: PersonProfileProps) {
               </>
             )}
           </div>
-        </div>
-
-        {/* Tags */}
-        <div className="bg-card border border-border rounded-lg p-4">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-              <TagIcon size={16} />
-              Tags
-            </h2>
-            {!isAddingTag && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsAddingTag(true)}
-              >
-                <Plus size={16} className="mr-2" />
-                Add Tag
-              </Button>
-            )}
           </div>
+        )}
 
-          {tagsLoading ? (
-            <div className="text-center py-4 text-muted-foreground">Loading tags...</div>
-          ) : (
-            <div className="space-y-3">
-              {/* Add new tag form */}
-              {isAddingTag && (
-                <div className="space-y-3">
-                  <div className="flex gap-2">
-                    <Input
-                      value={newTagName}
-                      onChange={(e) => setNewTagName(e.target.value)}
-                      placeholder="Search or create tag (e.g., NoiseBridge)"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          handleAddTag()
-                        } else if (e.key === 'Escape') {
-                          setIsAddingTag(false)
-                          setNewTagName('')
-                        }
-                      }}
-                      autoFocus
-                    />
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setIsAddingTag(false)
-                        setNewTagName('')
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-
-                  {/* Suggested tags */}
-                  {availableTags.length > 0 && (
-                    <div className="space-y-2">
-                      <div className="text-xs text-muted-foreground font-medium">
-                        {newTagName ? 'Matching tags' : 'Available tags'}
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {(newTagName ? suggestedTags : availableTags).slice(0, 10).map((tag) => (
-                          <button
-                            key={tag.id}
-                            onClick={() => handleQuickAddTag(tag.name)}
-                            disabled={addTagToPerson.isPending}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-secondary hover:bg-secondary/80 border border-border rounded-full text-sm transition-colors disabled:opacity-50"
-                          >
-                            <Plus size={12} />
-                            {tag.name}
-                          </button>
-                        ))}
-                      </div>
-                      {newTagName && !suggestedTags.find(t => t.name.toLowerCase() === newTagName.toLowerCase()) && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleAddTag()}
-                          disabled={addTagToPerson.isPending}
-                          className="w-full"
-                        >
-                          <Plus size={14} className="mr-2" />
-                          Create new tag "{newTagName}"
-                        </Button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Display existing tags */}
-              {personTags.length === 0 && !isAddingTag ? (
-                <p className="text-muted-foreground text-center py-4">
-                  No tags yet. Click "Add Tag" to create one.
-                </p>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {personTags.map((tag) => (
-                    <div
-                      key={tag.id}
-                      className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full text-sm"
-                    >
-                      <span>{tag.name}</span>
-                      <button
-                        onClick={() => handleRemoveTag(tag.id)}
-                        className="hover:text-destructive transition-colors"
-                        disabled={removeTagFromPerson.isPending}
-                      >
-                        <X size={14} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Notebook */}
+        {/* Memories */}
         <div className="bg-card border border-border rounded-lg p-4">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Notebook</h2>
+            <h2 className="text-lg font-semibold">Memories</h2>
             <Button
               variant="outline"
               size="sm"
               onClick={handleNewEntry}
               disabled={isCreatingEntry}
             >
-              <Plus size={16} className="mr-2" />
-              New Entry
+              <PenLine size={16} className="mr-2" />
+              Write
             </Button>
           </div>
 
@@ -601,22 +655,24 @@ export function PersonProfile({ personId }: PersonProfileProps) {
           </div>
         )}
 
-        {/* Statistics */}
-        <div className="bg-card border border-border rounded-lg p-4">
-          <h2 className="text-lg font-semibold mb-4">Statistics</h2>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <div className="text-muted-foreground">Last updated</div>
-              <div className="font-medium">
-                {new Date(person.updated_at).toLocaleDateString()}
-              </div>
-            </div>
-            <div>
-              <div className="text-muted-foreground">Profile index</div>
-              <div className="font-medium">{person.profile_pic_index}</div>
-            </div>
+        {/* Danger Zone - only show in edit mode */}
+        {isEditing && (
+          <div className="bg-card border border-destructive/50 rounded-lg p-4">
+            <h2 className="text-lg font-semibold mb-2 text-destructive">Danger Zone</h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              Once you delete a person, there is no going back. Please be certain.
+            </p>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleDelete}
+              disabled={deletePerson.isPending}
+            >
+              <Trash2 size={16} className="mr-2" />
+              Delete Person
+            </Button>
           </div>
-        </div>
+        )}
       </div>
     </div>
   )

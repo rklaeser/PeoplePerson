@@ -44,6 +44,10 @@ export interface UIStore {
   // Location settings for map
   defaultLocation?: { city: string; state: string; lat: number; lng: number }
   setDefaultLocation: (location: { city: string; state: string; lat: number; lng: number } | undefined) => void
+
+  // Assistant settings
+  assistantName: 'Scout' | 'Nico'
+  setAssistantName: (name: 'Scout' | 'Nico') => void
 }
 
 export const useUIStore = create<UIStore>()(
@@ -91,6 +95,10 @@ export const useUIStore = create<UIStore>()(
       // Location settings
       defaultLocation: undefined,
       setDefaultLocation: (location) => set({ defaultLocation: location }),
+
+      // Assistant settings
+      assistantName: 'Scout',
+      setAssistantName: (name) => set({ assistantName: name }),
     }),
     {
       name: 'peopleperson-ui-store',
@@ -102,6 +110,7 @@ export const useUIStore = create<UIStore>()(
         composerExpanded: state.composerExpanded,
         viewMode: state.viewMode,
         defaultLocation: state.defaultLocation,
+        assistantName: state.assistantName,
       }),
     }
   )

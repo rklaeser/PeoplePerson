@@ -210,6 +210,27 @@ resource "google_secret_manager_secret_version" "twilio_phone_number" {
   secret_data = var.twilio_phone_number
 }
 
+# Gemini API Key Secret
+
+resource "google_secret_manager_secret" "gemini_api_key" {
+  secret_id = "gemini-api-key"
+  project   = var.project_id
+
+  replication {
+    auto {}
+  }
+
+  labels = {
+    component = "ai"
+    shared    = "true"
+  }
+}
+
+resource "google_secret_manager_secret_version" "gemini_api_key" {
+  secret      = google_secret_manager_secret.gemini_api_key.id
+  secret_data = var.gemini_api_key
+}
+
 # Database URL Secrets
 
 resource "google_secret_manager_secret" "database_url_production" {
@@ -296,6 +317,14 @@ resource "google_secret_manager_secret_iam_binding" "twilio_auth_token_access" {
 
 resource "google_secret_manager_secret_iam_binding" "twilio_phone_number_access" {
   secret_id = google_secret_manager_secret.twilio_phone_number.secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  members = [
+    "serviceAccount:${google_service_account.cloud_run_sa.email}",
+  ]
+}
+
+resource "google_secret_manager_secret_iam_binding" "gemini_api_key_access" {
+  secret_id = google_secret_manager_secret.gemini_api_key.secret_id
   role      = "roles/secretmanager.secretAccessor"
   members = [
     "serviceAccount:${google_service_account.cloud_run_sa.email}",
