@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { AppLayout } from '@/components/layout/AppLayout'
 
 const peopleSearchSchema = z.object({
-  filter: z.enum(['all', 'unread', 'important']).optional().default('all'),
+  filter: z.enum(['all', 'unread', 'important', 'needs-attention', 'healthy', 'dormant']).optional().default('all'),
   sort: z.enum(['recent', 'name', 'intent']).optional().default('recent'),
   search: z.string().optional(),
 })

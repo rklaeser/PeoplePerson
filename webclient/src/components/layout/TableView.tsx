@@ -152,7 +152,11 @@ export function TableView() {
   const handleSearchChange = (value: string) => {
     setSearchQuery(value)
     navigate({
-      search: { ...search, search: value || undefined }
+      search: (prev) => ({
+        filter: prev.filter,
+        sort: prev.sort,
+        search: value || undefined
+      })
     })
   }
 

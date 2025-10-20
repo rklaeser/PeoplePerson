@@ -74,7 +74,11 @@ export function PeopleList() {
     setSearchQuery(value)
     // TODO: Debounce this
     navigate({
-      search: { ...search, search: value || undefined }
+      search: (prev) => ({
+        filter: prev.filter,
+        sort: prev.sort,
+        search: value || undefined
+      })
     })
   }
 
@@ -166,25 +170,41 @@ export function PeopleList() {
         <div className="flex gap-2 text-xs">
           <FilterButton
             active={!search.filter || search.filter === 'all'}
-            onClick={() => navigate({ search: { ...search, filter: 'all' }})}
+            onClick={() => navigate({ search: (prev) => ({
+              filter: 'all',
+              sort: prev.sort,
+              search: prev.search
+            }) })}
           >
             All ({rawPeople.length})
           </FilterButton>
           <FilterButton
             active={search.filter === 'healthy'}
-            onClick={() => navigate({ search: { ...search, filter: 'healthy' }})}
+            onClick={() => navigate({ search: (prev) => ({
+              filter: 'healthy',
+              sort: prev.sort,
+              search: prev.search
+            }) })}
           >
             🌳 Thriving
           </FilterButton>
           <FilterButton
             active={search.filter === 'needs-attention'}
-            onClick={() => navigate({ search: { ...search, filter: 'needs-attention' }})}
+            onClick={() => navigate({ search: (prev) => ({
+              filter: 'needs-attention',
+              sort: prev.sort,
+              search: prev.search
+            }) })}
           >
             🍁 Declining
           </FilterButton>
           <FilterButton
             active={search.filter === 'dormant'}
-            onClick={() => navigate({ search: { ...search, filter: 'dormant' }})}
+            onClick={() => navigate({ search: (prev) => ({
+              filter: 'dormant',
+              sort: prev.sort,
+              search: prev.search
+            }) })}
           >
             🪵 Dormant
           </FilterButton>
@@ -303,7 +323,7 @@ function PersonListItem({ person, onClick, onNameClick, style }: PersonListItemP
               </h3>
               {person.tags && person.tags.length > 0 && (
                 <div className="flex gap-1 flex-wrap overflow-hidden">
-                  {person.tags.slice(0, 3).map((tag) => (
+                  {person.tags.slice(0, 3).map((tag: import('@/types/api').Tag) => (
                     <span
                       key={tag.id}
                       className="text-xs px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20"
