@@ -73,23 +73,23 @@ steps:
       - |
         # Determine environment based on branch
         if [ "${BRANCH_NAME}" = "main" ]; then
-          ENVIRONMENT="production"
+          ENV="production"
         else
-          ENVIRONMENT="staging"
+          ENV="staging"
         fi
 
-        echo "🚀 Deploying to $ENVIRONMENT environment"
+        echo "🚀 Deploying to $$ENV environment"
 
         # Initialize Terraform with environment-specific backend
         cd terraform
-        terraform init -backend-config="backend-$ENVIRONMENT.hcl" -reconfigure
+        terraform init -backend-config="backend-$$ENV.hcl" -reconfigure
 
         # Apply Terraform configuration with latest image tag
         terraform apply -auto-approve \
-          -var-file="$ENVIRONMENT.tfvars" \
+          -var-file="$$ENV.tfvars" \
           -var="image_tag=latest"
 
-        echo "✅ Deployment to $ENVIRONMENT completed successfully!"
+        echo "✅ Deployment to $$ENV completed successfully!"
     waitFor:
       - 'push-api'
       - 'push-frontend'
