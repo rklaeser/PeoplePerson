@@ -65,28 +65,30 @@ steps:
     args: ['push', '--all-tags', 'gcr.io/${_PROJECT_ID}/peopleperson-frontend']
     waitFor: ['build-frontend']
 
-  # Deploy to Cloud Run via Terraform
-  - name: 'hashicorp/terraform:1.5'
-    id: 'terraform-deploy'
-    entrypoint: 'sh'
+  # Deploy new images to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy-api'
+    entrypoint: 'gcloud'
     args:
-      - '-c'
-      - |
-        echo "🚀 Deploying to ${_ENVIRONMENT} environment"
+      - 'run'
+      - 'deploy'
+      - 'peopleperson-api-${_ENVIRONMENT}'
+      - '--image=gcr.io/${_PROJECT_ID}/peopleperson-api:latest'
+      - '--region=us-central1'
+      - '--project=${_PROJECT_ID}'
+    waitFor: ['push-api']
 
-        # Initialize Terraform with environment-specific backend
-        cd terraform
-        terraform init -backend-config="backend-${_ENVIRONMENT}.hcl" -reconfigure
-
-        # Apply Terraform configuration with latest image tag
-        terraform apply -auto-approve \
-          -var-file="${_ENVIRONMENT}.tfvars" \
-          -var="image_tag=latest"
-
-        echo "✅ Deployment to ${_ENVIRONMENT} completed successfully!"
-    waitFor:
-      - 'push-api'
-      - 'push-frontend'
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy-frontend'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'peopleperson-frontend-${_ENVIRONMENT}'
+      - '--image=gcr.io/${_PROJECT_ID}/peopleperson-frontend:latest'
+      - '--region=us-central1'
+      - '--project=${_PROJECT_ID}'
+    waitFor: ['push-frontend']
 
 images:
   - 'gcr.io/${_PROJECT_ID}/peopleperson-api:latest'
