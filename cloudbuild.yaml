@@ -64,6 +64,35 @@ steps:
     args: ['push', '--all-tags', 'gcr.io/${_PROJECT_ID}/peopleperson-frontend']
     waitFor: ['build-frontend']
 
+  # Deploy to Cloud Run via Terraform
+  - name: 'hashicorp/terraform:1.5'
+    id: 'terraform-deploy'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        # Determine environment based on branch
+        if [ "${BRANCH_NAME}" = "main" ]; then
+          ENVIRONMENT="production"
+        else
+          ENVIRONMENT="staging"
+        fi
+
+        echo "🚀 Deploying to $ENVIRONMENT environment"
+
+        # Initialize Terraform with environment-specific backend
+        cd terraform
+        terraform init -backend-config="backend-$ENVIRONMENT.hcl" -reconfigure
+
+        # Apply Terraform configuration with latest image tag
+        terraform apply -auto-approve \
+          -var-file="$ENVIRONMENT.tfvars" \
+          -var="image_tag=latest"
+
+        echo "✅ Deployment to $ENVIRONMENT completed successfully!"
+    waitFor:
+      - 'push-api'
+      - 'push-frontend'
 
 images:
   - 'gcr.io/${_PROJECT_ID}/peopleperson-api:latest'
