@@ -21,7 +21,7 @@ steps:
       - '-t'
       - 'gcr.io/${_PROJECT_ID}/peopleperson-api:latest'
       - '-f'
-      - 'Dockerfile.prod'
+      - 'Dockerfile'
       - '.'
     dir: 'api'
 
@@ -34,9 +34,9 @@ steps:
       - '-t'
       - 'gcr.io/${_PROJECT_ID}/peopleperson-frontend:latest'
       - '-f'
-      - 'Dockerfile.prod'
+      - 'Dockerfile'
       - '.'
-    dir: 'frontend'
+    dir: 'webclient'
 
   # Push all images
 
