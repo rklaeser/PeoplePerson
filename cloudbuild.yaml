@@ -3,6 +3,7 @@
 
 substitutions:
   _PROJECT_ID: peopleperson-app
+  _ENVIRONMENT: staging  # Default to staging, override in triggers
 
 options:
   logging: CLOUD_LOGGING_ONLY
@@ -71,25 +72,18 @@ steps:
     args:
       - '-c'
       - |
-        # Determine environment based on branch
-        if [ "${BRANCH_NAME}" = "main" ]; then
-          ENV="production"
-        else
-          ENV="staging"
-        fi
-
-        echo "🚀 Deploying to $$ENV environment"
+        echo "🚀 Deploying to ${_ENVIRONMENT} environment"
 
         # Initialize Terraform with environment-specific backend
         cd terraform
-        terraform init -backend-config="backend-$$ENV.hcl" -reconfigure
+        terraform init -backend-config="backend-${_ENVIRONMENT}.hcl" -reconfigure
 
         # Apply Terraform configuration with latest image tag
         terraform apply -auto-approve \
-          -var-file="$$ENV.tfvars" \
+          -var-file="${_ENVIRONMENT}.tfvars" \
           -var="image_tag=latest"
 
-        echo "✅ Deployment to $$ENV completed successfully!"
+        echo "✅ Deployment to ${_ENVIRONMENT} completed successfully!"
     waitFor:
       - 'push-api'
       - 'push-frontend'
