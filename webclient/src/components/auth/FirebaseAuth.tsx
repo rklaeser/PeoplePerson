@@ -1,16 +1,35 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { auth } from '@/config/firebase'
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Loader2 } from 'lucide-react'
+import { useUIStore } from '@/stores/ui-store'
 
-const FirebaseAuth: React.FC = () => {
+interface FirebaseAuthProps {
+  initialMode?: 'signIn' | 'signUp'
+  selectedAnimalGuide?: 'Scout' | 'Nico'
+  onBack?: () => void
+}
+
+const FirebaseAuth: React.FC<FirebaseAuthProps> = ({
+  initialMode = 'signIn',
+  selectedAnimalGuide,
+  onBack
+}) => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [isSignUp, setIsSignUp] = useState(false)
+  const [isSignUp, setIsSignUp] = useState(initialMode === 'signUp')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const { setAssistantName } = useUIStore()
+
+  // Set the animal guide when component mounts if provided
+  useEffect(() => {
+    if (selectedAnimalGuide) {
+      setAssistantName(selectedAnimalGuide)
+    }
+  }, [selectedAnimalGuide, setAssistantName])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -20,6 +39,10 @@ const FirebaseAuth: React.FC = () => {
     try {
       if (isSignUp) {
         await createUserWithEmailAndPassword(auth, email, password)
+        // Set animal guide preference if provided
+        if (selectedAnimalGuide) {
+          setAssistantName(selectedAnimalGuide)
+        }
       } else {
         await signInWithEmailAndPassword(auth, email, password)
       }
@@ -31,7 +54,44 @@ const FirebaseAuth: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background px-4">
+      {selectedAnimalGuide && onBack && (
+        <div className="mb-6 flex flex-col items-center">
+          <button
+            type="button"
+            onClick={onBack}
+            className="group relative"
+          >
+            <div className="w-32 h-32 relative">
+              <img
+                src={selectedAnimalGuide === 'Scout' ? '/scout.png' : '/nico.png'}
+                alt={selectedAnimalGuide}
+                className="w-full h-full object-contain"
+              />
+            </div>
+            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-lg">
+              <span className="text-white text-sm font-medium px-3 text-center">
+                Reconsider my animal guide
+              </span>
+            </div>
+          </button>
+
+          {/* Speech Bubble */}
+          <div className="mt-4 relative">
+            <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent border-b-border"></div>
+            <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[7px] border-r-[7px] border-b-[7px] border-l-transparent border-r-transparent border-b-card"></div>
+            <div className="bg-card border border-border rounded-lg px-4 py-2 shadow-sm">
+              <p className="text-sm text-muted-foreground italic text-center">
+                {selectedAnimalGuide === 'Scout'
+                  ? '"Bark! Ready to help you get started!"'
+                  : '"Let us begin our empire together."'
+                }
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="w-full max-w-md p-8 bg-card border border-border rounded-lg shadow-lg">
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-foreground">Welcome to PeoplePerson</h1>
@@ -104,6 +164,18 @@ const FirebaseAuth: React.FC = () => {
           >
             {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
           </Button>
+
+          {onBack && (
+            <Button
+              type="button"
+              variant="outline"
+              className="mt-2 w-full"
+              onClick={onBack}
+              disabled={loading}
+            >
+              Back to landing page
+            </Button>
+          )}
         </div>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { StrictMode } from 'react'
+import { StrictMode, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 
@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 import FirebaseAuth from '@/components/auth/FirebaseAuth'
+import LandingPage from '@/components/LandingPage'
 import { Loader2 } from 'lucide-react'
 
 // Import the generated route tree
@@ -35,6 +36,8 @@ const queryClient = new QueryClient({
 // App content with authentication check
 function AppContent() {
   const { user, loading } = useAuth()
+  const [showAuth, setShowAuth] = useState(false)
+  const [selectedAnimalGuide, setSelectedAnimalGuide] = useState<'Scout' | 'Nico' | undefined>()
 
   if (loading) {
     return (
@@ -48,7 +51,27 @@ function AppContent() {
   }
 
   if (!user) {
-    return <FirebaseAuth />
+    if (showAuth) {
+      return (
+        <FirebaseAuth
+          initialMode="signUp"
+          selectedAnimalGuide={selectedAnimalGuide}
+          onBack={() => {
+            setShowAuth(false)
+            setSelectedAnimalGuide(undefined)
+          }}
+        />
+      )
+    }
+
+    return (
+      <LandingPage
+        onGetStarted={(guide) => {
+          setSelectedAnimalGuide(guide)
+          setShowAuth(true)
+        }}
+      />
+    )
   }
 
   return (
