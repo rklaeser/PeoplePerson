@@ -1,8 +1,12 @@
 import { useState } from 'react'
 import { useUIStore } from '@/stores/ui-store'
+import { useAuth } from '@/contexts/AuthContext'
+import { useNavigate } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { X } from 'lucide-react'
+import { X, Trash2 } from 'lucide-react'
+import { api } from '@/lib/api-client'
+import { auth } from '@/config/firebase'
 
 interface SettingsProps {
   isOpen: boolean
@@ -11,10 +15,13 @@ interface SettingsProps {
 
 export function Settings({ isOpen, onClose }: SettingsProps) {
   const { defaultLocation, setDefaultLocation, assistantName, setAssistantName } = useUIStore()
+  const { logout } = useAuth()
+  const navigate = useNavigate()
   const [city, setCity] = useState(defaultLocation?.city || '')
   const [state, setState] = useState(defaultLocation?.state || '')
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   if (!isOpen) return null
 
@@ -64,6 +71,46 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
     setDefaultLocation(undefined)
     setCity('')
     setState('')
+  }
+
+  const handleDeleteAccount = async () => {
+    const confirmation = window.confirm(
+      'Are you sure you want to delete your account? This will permanently delete all your data including all people, memories, tags, and messages. This action cannot be undone.'
+    )
+
+    if (!confirmation) return
+
+    const doubleConfirmation = window.prompt(
+      'To confirm deletion, please type "DELETE" in all caps:'
+    )
+
+    if (doubleConfirmation !== 'DELETE') {
+      alert('Account deletion cancelled.')
+      return
+    }
+
+    setIsDeleting(true)
+    setError(null)
+
+    try {
+      // Delete user data from backend
+      await api.deleteCurrentUser()
+
+      // Delete Firebase auth account
+      const currentUser = auth.currentUser
+      if (currentUser) {
+        await currentUser.delete()
+      }
+
+      // Sign out and redirect to landing
+      await logout()
+      navigate({ to: '/landing' })
+    } catch (err: any) {
+      setError(`Failed to delete account: ${err.message || 'Unknown error'}`)
+      console.error('Account deletion error:', err)
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   return (
@@ -189,6 +236,23 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* Danger Zone */}
+            <div className="border-t border-destructive/30 pt-6">
+              <h3 className="text-sm font-medium mb-3 text-destructive">Danger Zone</h3>
+              <p className="text-xs text-muted-foreground mb-4">
+                Once you delete your account, there is no going back. Please be certain.
+              </p>
+              <Button
+                variant="destructive"
+                onClick={handleDeleteAccount}
+                disabled={isDeleting}
+                className="w-full"
+              >
+                <Trash2 size={16} className="mr-2" />
+                {isDeleting ? 'Deleting Account...' : 'Delete Account'}
+              </Button>
             </div>
           </div>
 

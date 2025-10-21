@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
-import { usePerson, useUpdatePerson, useDeletePerson, usePeople, useNotebookEntries, useCreateNotebookEntry, useUpdateNotebookEntry, useDeleteNotebookEntry, useMarkAsContacted, usePersonTags, useAddTagToPerson, useRemoveTagFromPerson, useTags } from '@/hooks/api-hooks'
+import { usePerson, useUpdatePerson, useDeletePerson, usePeople, useMarkAsContacted, usePersonTags, useAddTagToPerson, useRemoveTagFromPerson, useTags } from '@/hooks/api-hooks'
 import { Avatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { HealthScore } from '@/components/HealthScore'
-import { Edit, Phone, MapPin, Calendar, Brain, X, Check, Plus, Trash2, MessageCircle, Tag as TagIcon, PenLine } from 'lucide-react'
+import { Edit, Phone, MapPin, Calendar, Brain, X, Check, Plus, Trash2, MessageCircle, Tag as TagIcon } from 'lucide-react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import type { PersonUpdate } from '@/types/api'
 
@@ -24,15 +24,6 @@ export function PersonProfile({ personId }: PersonProfileProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [formData, setFormData] = useState<PersonUpdate>({})
 
-  // Notebook state
-  const { data: entries = [], isLoading: entriesLoading } = useNotebookEntries(personId)
-  const createEntry = useCreateNotebookEntry()
-  const updateEntry = useUpdateNotebookEntry()
-  const deleteEntry = useDeleteNotebookEntry()
-  const [editingEntryId, setEditingEntryId] = useState<string | null>(null)
-  const [editingContent, setEditingContent] = useState('')
-  const [isCreatingEntry, setIsCreatingEntry] = useState(false)
-  const [newEntryContent, setNewEntryContent] = useState('')
 
   // Tags state
   const { data: personTags = [], isLoading: tagsLoading } = usePersonTags(personId)
@@ -73,26 +64,6 @@ export function PersonProfile({ personId }: PersonProfileProps) {
       await markAsContacted.mutateAsync(personId)
     } catch (error) {
       console.error('Failed to mark as contacted:', error)
-    }
-  }
-
-  // Format timestamp for notebook entries
-  const formatTimestamp = (dateStr: string) => {
-    const date = new Date(dateStr)
-    const now = new Date()
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-    const yesterday = new Date(today)
-    yesterday.setDate(yesterday.getDate() - 1)
-    const entryDate = new Date(date.getFullYear(), date.getMonth(), date.getDate())
-
-    const timeStr = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-
-    if (entryDate.getTime() === today.getTime()) {
-      return `Today at ${timeStr}`
-    } else if (entryDate.getTime() === yesterday.getTime()) {
-      return `Yesterday at ${timeStr}`
-    } else {
-      return `${date.toLocaleDateString()} at ${timeStr}`
     }
   }
 
@@ -139,70 +110,6 @@ export function PersonProfile({ personId }: PersonProfileProps) {
       setFormData({})
     } catch (error) {
       console.error('Failed to save person:', error)
-    }
-  }
-
-  // Notebook handlers
-  const handleNewEntry = () => {
-    setIsCreatingEntry(true)
-    setNewEntryContent('')
-  }
-
-  const handleCancelNewEntry = () => {
-    setIsCreatingEntry(false)
-    setNewEntryContent('')
-  }
-
-  const handleSaveNewEntry = async () => {
-    if (!newEntryContent.trim()) return
-
-    try {
-      const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD
-      await createEntry.mutateAsync({
-        personId,
-        data: {
-          entry_date: today,
-          content: newEntryContent,
-        },
-      })
-      setIsCreatingEntry(false)
-      setNewEntryContent('')
-    } catch (error) {
-      console.error('Failed to create entry:', error)
-    }
-  }
-
-  const handleEditEntry = (entryId: string, content: string) => {
-    setEditingEntryId(entryId)
-    setEditingContent(content)
-  }
-
-  const handleCancelEdit = () => {
-    setEditingEntryId(null)
-    setEditingContent('')
-  }
-
-  const handleSaveEntry = async (entryId: string) => {
-    try {
-      await updateEntry.mutateAsync({
-        personId,
-        entryId,
-        data: { content: editingContent },
-      })
-      setEditingEntryId(null)
-      setEditingContent('')
-    } catch (error) {
-      console.error('Failed to update entry:', error)
-    }
-  }
-
-  const handleDeleteEntry = async (entryId: string) => {
-    if (!confirm('Are you sure you want to delete this entry?')) return
-
-    try {
-      await deleteEntry.mutateAsync({ personId, entryId })
-    } catch (error) {
-      console.error('Failed to delete entry:', error)
     }
   }
 
@@ -537,112 +444,6 @@ export function PersonProfile({ personId }: PersonProfileProps) {
           </div>
           </div>
         )}
-
-        {/* Memories */}
-        <div className="bg-card border border-border rounded-lg p-4">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Memories</h2>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleNewEntry}
-              disabled={isCreatingEntry}
-            >
-              <PenLine size={16} className="mr-2" />
-              Write
-            </Button>
-          </div>
-
-          {entriesLoading ? (
-            <div className="text-center py-8 text-muted-foreground">Loading entries...</div>
-          ) : (
-            <div className="space-y-4">
-              {/* New entry form */}
-              {isCreatingEntry && (
-                <div className="border rounded-lg p-3 bg-muted/20">
-                  <div className="text-sm font-medium text-muted-foreground mb-2">
-                    {formatTimestamp(new Date().toISOString())}
-                  </div>
-                  <Textarea
-                    value={newEntryContent}
-                    onChange={(e) => setNewEntryContent(e.target.value)}
-                    placeholder="Write your entry..."
-                    className="min-h-[100px] mb-2"
-                    autoFocus
-                  />
-                  <div className="flex gap-2">
-                    <Button size="sm" onClick={handleSaveNewEntry} disabled={createEntry.isPending}>
-                      Save
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={handleCancelNewEntry}>
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {/* Existing entries */}
-              {entries.length === 0 && !isCreatingEntry ? (
-                <p className="text-muted-foreground text-center py-8">
-                  No entries yet. Click "New Entry" to add one.
-                </p>
-              ) : (
-                entries.map((entry) => (
-                  <div key={entry.id} className="border rounded-lg p-3">
-                    {editingEntryId === entry.id ? (
-                      // Edit mode
-                      <div className="space-y-2">
-                        <div className="text-sm font-medium text-muted-foreground">
-                          {formatTimestamp(entry.created_at)}
-                        </div>
-                        <Textarea
-                          value={editingContent}
-                          onChange={(e) => setEditingContent(e.target.value)}
-                          className="min-h-[100px]"
-                          autoFocus
-                        />
-                        <div className="flex gap-2">
-                          <Button size="sm" onClick={() => handleSaveEntry(entry.id)} disabled={updateEntry.isPending}>
-                            Save
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={handleCancelEdit}>
-                            Cancel
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      // View mode
-                      <>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium text-muted-foreground">
-                            {formatTimestamp(entry.created_at)}
-                          </span>
-                          <div className="flex gap-1">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleEditEntry(entry.id, entry.content)}
-                            >
-                              <Edit size={14} />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleDeleteEntry(entry.id)}
-                            >
-                              <Trash2 size={14} />
-                            </Button>
-                          </div>
-                        </div>
-                        <p className="text-sm whitespace-pre-wrap">{entry.content}</p>
-                      </>
-                    )}
-                  </div>
-                ))
-              )}
-            </div>
-          )}
-        </div>
 
         {/* Mnemonic */}
         {person.mnemonic && (

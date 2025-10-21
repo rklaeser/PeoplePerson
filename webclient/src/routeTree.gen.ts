@@ -10,12 +10,21 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as PeopleRouteImport } from './routes/people'
+import { Route as LandingRouteImport } from './routes/landing'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PeoplePersonIdRouteImport } from './routes/people/$personId'
+import { Route as BlogTomDunbarNumberRouteImport } from './routes/blog/tom-dunbar-number'
+import { Route as BlogScoutCareForHumansRouteImport } from './routes/blog/scout-care-for-humans'
+import { Route as BlogNicoOneTrickRouteImport } from './routes/blog/nico-one-trick'
 
 const PeopleRoute = PeopleRouteImport.update({
   id: '/people',
   path: '/people',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LandingRoute = LandingRouteImport.update({
+  id: '/landing',
+  path: '/landing',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -28,34 +37,87 @@ const PeoplePersonIdRoute = PeoplePersonIdRouteImport.update({
   path: '/$personId',
   getParentRoute: () => PeopleRoute,
 } as any)
+const BlogTomDunbarNumberRoute = BlogTomDunbarNumberRouteImport.update({
+  id: '/blog/tom-dunbar-number',
+  path: '/blog/tom-dunbar-number',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BlogScoutCareForHumansRoute = BlogScoutCareForHumansRouteImport.update({
+  id: '/blog/scout-care-for-humans',
+  path: '/blog/scout-care-for-humans',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BlogNicoOneTrickRoute = BlogNicoOneTrickRouteImport.update({
+  id: '/blog/nico-one-trick',
+  path: '/blog/nico-one-trick',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/landing': typeof LandingRoute
   '/people': typeof PeopleRouteWithChildren
+  '/blog/nico-one-trick': typeof BlogNicoOneTrickRoute
+  '/blog/scout-care-for-humans': typeof BlogScoutCareForHumansRoute
+  '/blog/tom-dunbar-number': typeof BlogTomDunbarNumberRoute
   '/people/$personId': typeof PeoplePersonIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/landing': typeof LandingRoute
   '/people': typeof PeopleRouteWithChildren
+  '/blog/nico-one-trick': typeof BlogNicoOneTrickRoute
+  '/blog/scout-care-for-humans': typeof BlogScoutCareForHumansRoute
+  '/blog/tom-dunbar-number': typeof BlogTomDunbarNumberRoute
   '/people/$personId': typeof PeoplePersonIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/landing': typeof LandingRoute
   '/people': typeof PeopleRouteWithChildren
+  '/blog/nico-one-trick': typeof BlogNicoOneTrickRoute
+  '/blog/scout-care-for-humans': typeof BlogScoutCareForHumansRoute
+  '/blog/tom-dunbar-number': typeof BlogTomDunbarNumberRoute
   '/people/$personId': typeof PeoplePersonIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/people' | '/people/$personId'
+  fullPaths:
+    | '/'
+    | '/landing'
+    | '/people'
+    | '/blog/nico-one-trick'
+    | '/blog/scout-care-for-humans'
+    | '/blog/tom-dunbar-number'
+    | '/people/$personId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/people' | '/people/$personId'
-  id: '__root__' | '/' | '/people' | '/people/$personId'
+  to:
+    | '/'
+    | '/landing'
+    | '/people'
+    | '/blog/nico-one-trick'
+    | '/blog/scout-care-for-humans'
+    | '/blog/tom-dunbar-number'
+    | '/people/$personId'
+  id:
+    | '__root__'
+    | '/'
+    | '/landing'
+    | '/people'
+    | '/blog/nico-one-trick'
+    | '/blog/scout-care-for-humans'
+    | '/blog/tom-dunbar-number'
+    | '/people/$personId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  LandingRoute: typeof LandingRoute
   PeopleRoute: typeof PeopleRouteWithChildren
+  BlogNicoOneTrickRoute: typeof BlogNicoOneTrickRoute
+  BlogScoutCareForHumansRoute: typeof BlogScoutCareForHumansRoute
+  BlogTomDunbarNumberRoute: typeof BlogTomDunbarNumberRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -65,6 +127,13 @@ declare module '@tanstack/react-router' {
       path: '/people'
       fullPath: '/people'
       preLoaderRoute: typeof PeopleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/landing': {
+      id: '/landing'
+      path: '/landing'
+      fullPath: '/landing'
+      preLoaderRoute: typeof LandingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -80,6 +149,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/people/$personId'
       preLoaderRoute: typeof PeoplePersonIdRouteImport
       parentRoute: typeof PeopleRoute
+    }
+    '/blog/tom-dunbar-number': {
+      id: '/blog/tom-dunbar-number'
+      path: '/blog/tom-dunbar-number'
+      fullPath: '/blog/tom-dunbar-number'
+      preLoaderRoute: typeof BlogTomDunbarNumberRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blog/scout-care-for-humans': {
+      id: '/blog/scout-care-for-humans'
+      path: '/blog/scout-care-for-humans'
+      fullPath: '/blog/scout-care-for-humans'
+      preLoaderRoute: typeof BlogScoutCareForHumansRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blog/nico-one-trick': {
+      id: '/blog/nico-one-trick'
+      path: '/blog/nico-one-trick'
+      fullPath: '/blog/nico-one-trick'
+      preLoaderRoute: typeof BlogNicoOneTrickRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -97,7 +187,11 @@ const PeopleRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  LandingRoute: LandingRoute,
   PeopleRoute: PeopleRouteWithChildren,
+  BlogNicoOneTrickRoute: BlogNicoOneTrickRoute,
+  BlogScoutCareForHumansRoute: BlogScoutCareForHumansRoute,
+  BlogTomDunbarNumberRoute: BlogTomDunbarNumberRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

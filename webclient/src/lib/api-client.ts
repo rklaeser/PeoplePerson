@@ -64,7 +64,12 @@ apiClient.interceptors.response.use(
 export const api = {
   // Auth
   async getCurrentUser(): Promise<User> {
-    const response: AxiosResponse<User> = await apiClient.get('/api/users/me')
+    const response: AxiosResponse<User> = await apiClient.get('/api/auth/me')
+    return response.data
+  },
+
+  async deleteCurrentUser(): Promise<{ message: string; user_id: string }> {
+    const response = await apiClient.delete('/api/auth/me')
     return response.data
   },
 

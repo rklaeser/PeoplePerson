@@ -1,14 +1,11 @@
-import { StrictMode, useState } from 'react'
+import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 
 import { RouterProvider, createRouter } from '@tanstack/react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
-import { AuthProvider, useAuth } from '@/contexts/AuthContext'
-import FirebaseAuth from '@/components/auth/FirebaseAuth'
-import LandingPage from '@/components/LandingPage'
-import { Loader2 } from 'lucide-react'
+import { AuthProvider } from '@/contexts/AuthContext'
 
 // Import the generated route tree
 import { routeTree } from './routeTree.gen'
@@ -33,47 +30,8 @@ const queryClient = new QueryClient({
   },
 })
 
-// App content with authentication check
+// App content - now always uses router
 function AppContent() {
-  const { user, loading } = useAuth()
-  const [showAuth, setShowAuth] = useState(false)
-  const [selectedAnimalGuide, setSelectedAnimalGuide] = useState<'Scout' | 'Nico' | undefined>()
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex items-center gap-2">
-          <Loader2 size={24} className="animate-spin" />
-          <span className="text-muted-foreground">Loading...</span>
-        </div>
-      </div>
-    )
-  }
-
-  if (!user) {
-    if (showAuth) {
-      return (
-        <FirebaseAuth
-          initialMode="signUp"
-          selectedAnimalGuide={selectedAnimalGuide}
-          onBack={() => {
-            setShowAuth(false)
-            setSelectedAnimalGuide(undefined)
-          }}
-        />
-      )
-    }
-
-    return (
-      <LandingPage
-        onGetStarted={(guide) => {
-          setSelectedAnimalGuide(guide)
-          setShowAuth(true)
-        }}
-      />
-    )
-  }
-
   return (
     <>
       <RouterProvider router={router} />

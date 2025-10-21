@@ -2,22 +2,26 @@ import { useParams, useSearch, useNavigate, useLocation } from '@tanstack/react-
 import { usePerson } from '@/hooks/api-hooks'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { MessageSquare, User, Activity } from 'lucide-react'
+import { MessageSquare, User, Activity, Notebook } from 'lucide-react'
 import { MessageThread } from './MessageThread'
 import { PersonProfile } from './PersonProfile'
 import { PersonActivity } from './PersonActivity'
+import { PersonMemories } from './PersonMemories'
 import { useUIStore } from '@/stores/ui-store'
 import { Avatar } from '@/components/ui/avatar'
 
 export function PersonPanel() {
   const location = useLocation()
   const navigate = useNavigate()
-  const { personId } = useParams({ from: '/people/$personId' })
-  const search = useSearch({ from: '/people/$personId' }) || { panel: 'messages' }
   const { toggleChatPanel, assistantName } = useUIStore()
 
   // Check if we're on a person route
   const isPersonRoute = location.pathname.startsWith('/people/') && location.pathname !== '/people'
+
+  // Use strict: false to avoid errors when not on the person route
+  const params = useParams({ strict: false }) as { personId?: string }
+  const personId = params.personId
+  const search = (useSearch({ strict: false }) as any) || { panel: 'messages' }
 
   const { data: person, isLoading } = usePerson(personId || '')
   
@@ -75,7 +79,7 @@ export function PersonPanel() {
     )
   }
 
-  const handleTabChange = (panel: 'messages' | 'profile' | 'activity') => {
+  const handleTabChange = (panel: 'messages' | 'profile' | 'activity' | 'memories') => {
     navigate({
       to: '/people/$personId',
       params: { personId: personId || '' },
@@ -137,6 +141,13 @@ export function PersonPanel() {
             >
               Activity
             </TabButton>
+            <TabButton
+              active={activePanel === 'memories'}
+              onClick={() => handleTabChange('memories')}
+              icon={<Notebook size={16} />}
+            >
+              Memories
+            </TabButton>
           </div>
         </div>
       </div>
@@ -146,6 +157,7 @@ export function PersonPanel() {
         {activePanel === 'messages' && <MessageThread personId={personId} />}
         {activePanel === 'profile' && <PersonProfile personId={personId} />}
         {activePanel === 'activity' && <PersonActivity personId={personId} />}
+        {activePanel === 'memories' && <PersonMemories personId={personId} />}
       </div>
     </main>
   )

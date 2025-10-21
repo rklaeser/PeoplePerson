@@ -7,9 +7,10 @@ import firebase_admin
 from firebase_admin import auth as firebase_auth, credentials
 import os
 from dotenv import load_dotenv
+from datetime import datetime, timedelta
 
 from database import get_db
-from models import User, UserCreate, UserRead
+from models import User, UserCreate, UserRead, Person, NotebookEntry
 
 load_dotenv()
 
@@ -70,11 +71,11 @@ async def get_current_user(
     firebase_uid = token.get("uid")
     email = token.get("email")
     name = token.get("name")
-    
+
     # Check if user exists
     query = select(User).where(User.firebase_uid == firebase_uid)
     user = db.exec(query).first()
-    
+
     if not user:
         # Create new user
         user = User(
@@ -85,7 +86,10 @@ async def get_current_user(
         db.add(user)
         db.commit()
         db.refresh(user)
-    
+
+        # Create default friends for new user
+        create_default_friends(user.id, db)
+
     return user
 
 
@@ -120,11 +124,80 @@ async def get_current_user_or_internal(
         return internal_user_id
     if firebase_user:
         return firebase_user.id
-    
+
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Authentication required"
     )
+
+
+def create_default_friends(user_id: UUID, db: Session):
+    """Create default friends (Tom, Nico, Scout) for new users"""
+    now = datetime.utcnow()
+    week_ago = now - timedelta(days=7)
+    two_weeks_ago = now - timedelta(days=14)
+
+    # Scout - the enthusiastic dog
+    scout = Person(
+        user_id=user_id,
+        name="Scout",
+        body="My guide! Always excited to help me remember people.",
+        last_contact_date=now,
+        created_at=two_weeks_ago
+    )
+    db.add(scout)
+    db.flush()
+
+    scout_memory = NotebookEntry(
+        person_id=scout.id,
+        user_id=user_id,
+        entry_date=two_weeks_ago.strftime('%Y-%m-%d'),
+        content="Scout helped me get started with PeoplePerson. Such a good dog! Reminds me to stay connected with everyone.\n\nRead more: https://peopleperson.klazr.com/blog/scout-care-for-humans",
+        created_at=two_weeks_ago
+    )
+    db.add(scout_memory)
+
+    # Nico - the strategic cat
+    nico = Person(
+        user_id=user_id,
+        name="Nico",
+        body="Strategic advisor. Helped me understand the power of remembering details about people.",
+        last_contact_date=now,
+        created_at=two_weeks_ago
+    )
+    db.add(nico)
+    db.flush()
+
+    nico_memory = NotebookEntry(
+        person_id=nico.id,
+        user_id=user_id,
+        entry_date=week_ago.strftime('%Y-%m-%d'),
+        content="Nico taught me that remembering people's details isn't manipulation—it's just being thoughtful at scale. World domination optional.\n\nRead more: https://peopleperson.klazr.com/blog/nico-one-trick",
+        created_at=week_ago
+    )
+    db.add(nico_memory)
+
+    # Tom - the Neanderthal
+    tom = Person(
+        user_id=user_id,
+        name="Tom",
+        body="Neanderthal trying to blend in with humans. Shows that anyone can master relationships with the right tools!",
+        last_contact_date=now,
+        created_at=two_weeks_ago
+    )
+    db.add(tom)
+    db.flush()
+
+    tom_memory = NotebookEntry(
+        person_id=tom.id,
+        user_id=user_id,
+        entry_date=week_ago.strftime('%Y-%m-%d'),
+        content="Tom proved that you can break past the Dunbar number (150 friends) with PeoplePerson. If a Neanderthal can do it, so can I!\n\nRead more: https://peopleperson.klazr.com/blog/tom-dunbar-number",
+        created_at=week_ago
+    )
+    db.add(tom_memory)
+
+    db.commit()
 
 
 @router.post("/register", response_model=UserRead)
@@ -135,17 +208,17 @@ async def register(
 ):
     """Register a new user"""
     firebase_uid = token.get("uid")
-    
+
     # Check if user already exists
     query = select(User).where(User.firebase_uid == firebase_uid)
     existing_user = db.exec(query).first()
-    
+
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="User already registered"
         )
-    
+
     # Create new user
     user = User(
         firebase_uid=firebase_uid,
@@ -155,7 +228,10 @@ async def register(
     db.add(user)
     db.commit()
     db.refresh(user)
-    
+
+    # Create default friends for new user
+    create_default_friends(user.id, db)
+
     return user
 
 
@@ -178,9 +254,26 @@ async def update_current_user(
         current_user.name = user_update.name
     if user_update.email:
         current_user.email = user_update.email
-    
+
     db.add(current_user)
     db.commit()
     db.refresh(current_user)
-    
+
     return current_user
+
+
+@router.delete("/me")
+async def delete_current_user(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Delete current user account and all associated data"""
+    user_id = current_user.id
+
+    # Delete user - cascading deletes will handle related records
+    # Order: NotebookEntries, Messages, PersonTags, PersonAssociations,
+    # EntryPersons, Entries, History, People, Tags, User
+    db.delete(current_user)
+    db.commit()
+
+    return {"message": "User account deleted successfully", "user_id": str(user_id)}

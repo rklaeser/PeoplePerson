@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { z } from 'zod'
 
 const personSearchSchema = z.object({
-  panel: z.enum(['messages', 'profile', 'activity']).optional().default('messages'),
+  panel: z.enum(['messages', 'profile', 'activity', 'memories']).optional().default('messages'),
   edit: z.string().optional(),
 })
 
