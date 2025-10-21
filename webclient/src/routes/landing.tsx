@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import LandingPage from '@/components/LandingPage'
 import FirebaseAuth from '@/components/auth/FirebaseAuth'
@@ -15,8 +15,13 @@ function LandingPageRoute() {
   const [selectedAnimalGuide, setSelectedAnimalGuide] = useState<'Scout' | 'Nico' | undefined>()
 
   // If user is authenticated, redirect to people page
+  useEffect(() => {
+    if (user) {
+      navigate({ to: '/people' })
+    }
+  }, [user, navigate])
+
   if (user) {
-    navigate({ to: '/people' })
     return null
   }
 

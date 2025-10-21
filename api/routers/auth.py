@@ -72,11 +72,22 @@ async def get_current_user(
     email = token.get("email")
     name = token.get("name")
 
-    # Check if user exists
+    # Check if user exists by firebase_uid
     query = select(User).where(User.firebase_uid == firebase_uid)
     user = db.exec(query).first()
 
     if not user:
+        # Check if email is already registered with a different Firebase account
+        if email:
+            email_query = select(User).where(User.email == email)
+            existing_user = db.exec(email_query).first()
+
+            if existing_user:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"This email ({email}) is already registered. If you previously deleted your account, please contact support to resolve this issue."
+                )
+
         # Create new user
         user = User(
             firebase_uid=firebase_uid,

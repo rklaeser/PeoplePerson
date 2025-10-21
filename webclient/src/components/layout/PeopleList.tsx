@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react'
-import { useNavigate, useSearch } from '@tanstack/react-router'
+import { useState, useMemo, useEffect, useRef } from 'react'
+import { useNavigate, useSearch, useLocation } from '@tanstack/react-router'
 import { usePeople, useCreatePerson } from '@/hooks/api-hooks'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -8,12 +8,12 @@ import { HealthScore } from '@/components/HealthScore'
 import { cn, formatTime } from '@/lib/utils'
 import { Search, Plus, Menu } from 'lucide-react'
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { useRef } from 'react'
 import { useUIStore } from '@/stores/ui-store'
 import { TableView } from './TableView'
 
 export function PeopleList() {
   const navigate = useNavigate()
+  const location = useLocation()
   const search = useSearch({ from: '/people' })
   const [searchQuery, setSearchQuery] = useState(search.search || '')
   const { viewMode, toggleHamburgerMenu } = useUIStore()
@@ -43,6 +43,21 @@ export function PeopleList() {
 
     return filtered
   }, [rawPeople, search.filter])
+
+  // Auto-select first person when on /people route (no person selected)
+  useEffect(() => {
+    // Check if we're on the base /people route (not /people/$personId)
+    const isBasePeopleRoute = location.pathname === '/people'
+
+    // If we're on base route, have people, and in list view mode, navigate to first person
+    if (isBasePeopleRoute && people.length > 0 && viewMode === 'list' && !isLoading) {
+      navigate({
+        to: '/people/$personId',
+        params: { personId: people[0].id },
+        search: { panel: 'messages' }
+      })
+    }
+  }, [location.pathname, people, viewMode, isLoading, navigate])
 
   const parentRef = useRef<HTMLDivElement>(null)
 

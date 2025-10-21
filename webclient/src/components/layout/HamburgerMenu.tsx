@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useUIStore } from '@/stores/ui-store'
 import { useAuth } from '@/contexts/AuthContext'
+import { useNavigate } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { X, LayoutList, Table, Map, Settings as SettingsIcon, LogOut } from 'lucide-react'
@@ -9,6 +10,7 @@ import { Settings } from './Settings'
 export function HamburgerMenu() {
   const { hamburgerMenuOpen, setHamburgerMenuOpen, viewMode, setViewMode, assistantName } = useUIStore()
   const { logout } = useAuth()
+  const navigate = useNavigate()
   const [settingsOpen, setSettingsOpen] = useState(false)
 
   if (!hamburgerMenuOpen) return null
@@ -104,9 +106,10 @@ export function HamburgerMenu() {
           <Button
             variant="ghost"
             className="w-full justify-start gap-2"
-            onClick={() => {
-              logout()
+            onClick={async () => {
+              await logout()
               setHamburgerMenuOpen(false)
+              navigate({ to: '/landing' })
             }}
           >
             <LogOut size={16} />
