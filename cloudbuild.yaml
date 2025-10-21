@@ -1,5 +1,5 @@
 # Cloud Build configuration for PeoplePerson
-# Builds Docker images only - deployment handled by Terraform
+# Handles both staging and production deployments based on branch
 
 substitutions:
   _PROJECT_ID: peopleperson-app
@@ -20,6 +20,10 @@ steps:
       - '--platform'
       - 'linux/amd64'
       - '-t'
+      - 'gcr.io/${_PROJECT_ID}/peopleperson-api:${SHORT_SHA}'
+      - '-t'
+      - 'gcr.io/${_PROJECT_ID}/peopleperson-api:${BRANCH_NAME}'
+      - '-t'
       - 'gcr.io/${_PROJECT_ID}/peopleperson-api:latest'
       - '-f'
       - 'Dockerfile'
@@ -32,6 +36,10 @@ steps:
       - 'build'
       - '--platform'
       - 'linux/amd64'
+      - '-t'
+      - 'gcr.io/${_PROJECT_ID}/peopleperson-frontend:${SHORT_SHA}'
+      - '-t'
+      - 'gcr.io/${_PROJECT_ID}/peopleperson-frontend:${BRANCH_NAME}'
       - '-t'
       - 'gcr.io/${_PROJECT_ID}/peopleperson-frontend:latest'
       - '--build-arg'
@@ -75,7 +83,7 @@ steps:
       - 'run'
       - 'deploy'
       - 'peopleperson-api-${_ENVIRONMENT}'
-      - '--image=gcr.io/${_PROJECT_ID}/peopleperson-api:latest'
+      - '--image=gcr.io/${_PROJECT_ID}/peopleperson-api:${BRANCH_NAME}'
       - '--region=us-central1'
       - '--project=${_PROJECT_ID}'
     waitFor: ['push-api']
@@ -87,13 +95,15 @@ steps:
       - 'run'
       - 'deploy'
       - 'peopleperson-frontend-${_ENVIRONMENT}'
-      - '--image=gcr.io/${_PROJECT_ID}/peopleperson-frontend:latest'
+      - '--image=gcr.io/${_PROJECT_ID}/peopleperson-frontend:${BRANCH_NAME}'
       - '--region=us-central1'
       - '--project=${_PROJECT_ID}'
     waitFor: ['push-frontend']
 
 images:
-  - 'gcr.io/${_PROJECT_ID}/peopleperson-api:latest'
-  - 'gcr.io/${_PROJECT_ID}/peopleperson-frontend:latest'
+  - 'gcr.io/${_PROJECT_ID}/peopleperson-api:${SHORT_SHA}'
+  - 'gcr.io/${_PROJECT_ID}/peopleperson-api:${BRANCH_NAME}'
+  - 'gcr.io/${_PROJECT_ID}/peopleperson-frontend:${SHORT_SHA}'
+  - 'gcr.io/${_PROJECT_ID}/peopleperson-frontend:${BRANCH_NAME}'
 
 timeout: '1800s'
