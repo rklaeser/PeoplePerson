@@ -1,6 +1,8 @@
-# People Person
+# PeoplePerson
 
-People Person is a friend journal that helps you remember names and anything else about your friends. It's a learning project so there is no public website. Video walk through in the works.
+Never forget a conversation. Always remember what matters. Build meaningful relationships at scale.
+
+PeoplePerson is a friend journal and relationship manager. It's a learning project so there is no public website. Video walk through in the works.
 
 ![Screenshot 2025-06-05 at 3 25 40 PM](https://github.com/user-attachments/assets/bd91b445-2ac2-4cee-b9db-5446b205601b)
 
@@ -12,42 +14,22 @@ People Person is a friend journal that helps you remember names and anything els
 
 # Stack
 
-Firebase Auth
-SvelteKit frontend.
-Django CRUD backend using DRF for easy CRUD
-FastAPI with LangChain for LLM backend
+Built with React and TanStack Router on the frontend, FastAPI backend with Firebase Authentication, and PostgreSQL (Cloud SQL) for data storage. SMS functionality powered by Twilio integration.
 
 ## To run
 
-
 ```bash
+# Setup database
+make db-sync    # Sync database schema
+make db-seed    # Seed with initial data
 
-# Destroy then create DB
-make db-clean
-make db-start
-make db-sync
-make db-seed
+# Start all services in tmux (recommended)
+make start-all
 
-# start firebase emulator for dev
-make firebase-start
-
-# start svelte frontend
-npm run dev
-
-# start django backend
-cd api
-source venv/bin/activate
-python run django.py
-
-# start django admin (CRUD db)
-make db-superuser
-cd api
-source venv/bin/activate
-python manage.py runserver
-
-# start fastapi backend
-cd api
-source venv/bin/activate
-python run fastapi.py
-
+# Or start individual services
+make sql        # Cloud SQL proxy
+make api        # FastAPI backend
+make auth       # Firebase Auth emulator
+make webclient  # React frontend
+make twilio     # Twilio dev phone for SMS testing
 ```
