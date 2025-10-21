@@ -35,6 +35,8 @@ steps:
       - '-t'
       - 'gcr.io/${_PROJECT_ID}/peopleperson-frontend:latest'
       - '--build-arg'
+      - 'VITE_APP_ENVIRONMENT=${_ENVIRONMENT}'
+      - '--build-arg'
       - 'VITE_FIREBASE_API_KEY=AIzaSyAgmbRX4MZROeWd1YuxxPy6WQr7kndBkRU'
       - '--build-arg'
       - 'VITE_FIREBASE_AUTH_DOMAIN=peopleperson-app.firebaseapp.com'
