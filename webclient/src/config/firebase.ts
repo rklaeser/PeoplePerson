@@ -12,6 +12,15 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 }
 
+// Debug: Log Firebase config (API key will be partially masked)
+console.log('Firebase Config:', {
+  ...firebaseConfig,
+  apiKey: firebaseConfig.apiKey ? `${firebaseConfig.apiKey.substring(0, 10)}...` : 'MISSING',
+  hasAuthDomain: !!firebaseConfig.authDomain,
+  hasProjectId: !!firebaseConfig.projectId,
+  hasAppId: !!firebaseConfig.appId
+})
+
 const app = initializeApp(firebaseConfig)
 export const auth = getAuth(app)
 

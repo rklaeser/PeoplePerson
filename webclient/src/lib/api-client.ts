@@ -74,12 +74,12 @@ export const api = {
   },
 
   // People
-  async getPeople(params?: { 
+  async getPeople(params?: {
     filter?: string
-    sort?: string 
-    search?: string 
+    sort?: string
+    search?: string
   }): Promise<Person[]> {
-    const response: AxiosResponse<Person[]> = await apiClient.get('/api/people', { params })
+    const response: AxiosResponse<Person[]> = await apiClient.get('/api/people/', { params })
     return response.data
   },
 
@@ -89,7 +89,7 @@ export const api = {
   },
 
   async createPerson(data: PersonCreate): Promise<Person> {
-    const response: AxiosResponse<Person> = await apiClient.post('/api/people', data)
+    const response: AxiosResponse<Person> = await apiClient.post('/api/people/', data)
     return response.data
   },
 
