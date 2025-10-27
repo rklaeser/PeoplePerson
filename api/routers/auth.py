@@ -22,7 +22,7 @@ if not firebase_admin._apps:
     # Check if using Firebase emulator
     emulator_host = os.getenv("FIREBASE_AUTH_EMULATOR_HOST")
     project_id = os.getenv("FIREBASE_PROJECT_ID", "peopleperson-app")
-    
+
     if emulator_host:
         # For emulator, initialize with project ID
         print(f"Using Firebase Auth emulator at {emulator_host}")
@@ -30,18 +30,16 @@ if not firebase_admin._apps:
         os.environ["FIREBASE_AUTH_EMULATOR_HOST"] = emulator_host
         firebase_admin.initialize_app(options={'projectId': project_id})
     else:
-        # For production, use service account credentials
+        # For production/staging: try credentials file, then fall back to ADC
         firebase_creds_path = os.getenv("FIREBASE_CREDENTIALS_PATH")
         if firebase_creds_path and os.path.exists(firebase_creds_path):
-            print("Using Firebase service account credentials")
+            print("Using Firebase service account credentials from file")
             cred = credentials.Certificate(firebase_creds_path)
             firebase_admin.initialize_app(cred, options={'projectId': project_id})
         else:
-            print("Warning: Firebase credentials not found. Authentication will not work.")
-            try:
-                firebase_admin.initialize_app(options={'projectId': project_id})
-            except:
-                pass
+            # Use Application Default Credentials (ADC) - works on Cloud Run
+            print(f"Using Application Default Credentials for Firebase (project: {project_id})")
+            firebase_admin.initialize_app(options={'projectId': project_id})
 
 
 async def verify_firebase_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
