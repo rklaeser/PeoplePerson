@@ -91,4 +91,22 @@ Return ONLY the JSON object, no other text.`;
 
 		throw new Error(`Failed after ${maxRetries} retries. Last error: ${lastError?.message}`);
 	}
+
+	/**
+	 * Generate simple text content from Gemini (not structured)
+	 */
+	async generateText(prompt: string): Promise<string> {
+		const model = this.genAI.getGenerativeModel({ model: this.model });
+		const result = await model.generateContent(prompt);
+		const response = await result.response;
+		return response.text();
+	}
+}
+
+/**
+ * Standalone function for simple text generation
+ */
+export async function generateContent(prompt: string): Promise<string> {
+	const client = new GeminiClient();
+	return client.generateText(prompt);
 }

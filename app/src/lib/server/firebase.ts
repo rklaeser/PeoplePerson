@@ -1,6 +1,7 @@
 import { initializeApp, getApps, type App, cert } from 'firebase-admin/app';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
-import { FIREBASE_PROJECT_ID, FIREBASE_SERVICE_ACCOUNT_KEY } from '$env/static/private';
+import { FIREBASE_PROJECT_ID } from '$env/static/private';
+import { env } from '$env/dynamic/private';
 
 let app: App;
 let db: Firestore;
@@ -18,9 +19,10 @@ export function initializeFirebase(): Firestore {
 	// Check if already initialized
 	if (getApps().length === 0) {
 		// Try to use service account key first (for Vercel), then fall back to ADC (for local dev)
-		if (FIREBASE_SERVICE_ACCOUNT_KEY) {
+		const serviceAccountKey = env.FIREBASE_SERVICE_ACCOUNT_KEY;
+		if (serviceAccountKey) {
 			try {
-				const serviceAccount = JSON.parse(FIREBASE_SERVICE_ACCOUNT_KEY);
+				const serviceAccount = JSON.parse(serviceAccountKey);
 				app = initializeApp({
 					credential: cert(serviceAccount),
 					projectId: FIREBASE_PROJECT_ID
