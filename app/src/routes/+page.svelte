@@ -4,10 +4,10 @@
 	import { onMount } from 'svelte';
 	import Landing from '$lib/components/Landing.svelte';
 
-	// Redirect to people page if authenticated
+	// Redirect to journal page if authenticated
 	onMount(() => {
 		if (authStore.user) {
-			goto('/people');
+			goto('/journal');
 		}
 	});
 </script>

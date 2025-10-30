@@ -2,18 +2,48 @@
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import IconHome from '~icons/lucide/home';
-	import IconTable from '~icons/lucide/table';
+	import { onMount } from 'svelte';
+	import { getGuide } from '$lib/guides';
+	import type { GuideType } from '$lib/types';
+	import IconBookOpen from '~icons/lucide/book-open';
+	import IconUsers from '~icons/lucide/users';
 	import IconMap from '~icons/lucide/map';
 
 	let expanded = $state(false);
 	let showAccountMenu = $state(false);
+	let userGuideType = $state<GuideType | null>(null);
 
-	const navItems = [
-		{ id: 'home', label: 'Home', icon: IconHome, href: '/people' },
-		{ id: 'table', label: 'Table', icon: IconTable, href: '/table' },
+	async function fetchUserGuide() {
+		try {
+			const token = await authStore.getIdToken();
+			if (!token) return;
+
+			const response = await fetch('/api/user', {
+				headers: { Authorization: `Bearer ${token}` }
+			});
+
+			if (response.ok) {
+				const user = await response.json();
+				userGuideType = user.selectedGuide || 'Nico';
+			}
+		} catch (e) {
+			userGuideType = 'Nico'; // Default
+		}
+	}
+
+	onMount(() => {
+		if (authStore.user) {
+			fetchUserGuide();
+		}
+	});
+
+	let guideName = $derived(userGuideType ? getGuide(userGuideType).name : 'Guide');
+
+	const navItems = $derived([
+		{ id: 'journal', label: `Chat with ${guideName}`, icon: IconBookOpen, href: '/journal' },
+		{ id: 'people', label: 'People', icon: IconUsers, href: '/people' },
 		{ id: 'map', label: 'Map', icon: IconMap, href: '/map' }
-	];
+	]);
 
 	function handleMouseEnter() {
 		expanded = true;

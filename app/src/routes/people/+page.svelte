@@ -3,20 +3,15 @@
 	import { authStore } from '$lib/stores/auth.svelte';
 	import PersonCard from '$lib/components/PersonCard.svelte';
 	import PersonPanel from '$lib/components/PersonPanel.svelte';
-	import GuideCard from '$lib/components/GuideCard.svelte';
-	import GuidePanel from '$lib/components/GuidePanel.svelte';
 	import TagManager from '$lib/components/TagManager.svelte';
 	import Sidebar from '$lib/components/Sidebar.svelte';
-	import { getGuide } from '$lib/guides';
-	import type { Person, Tag, GuideType } from '$lib/types';
+	import type { Person, Tag } from '$lib/types';
 
 	let people = $state<Person[]>([]);
 	let loading = $state(true);
 	let error = $state('');
 	let searchQuery = $state('');
 	let selectedPersonId = $state<string | null>(null);
-	let selectedGuide = $state(false);
-	let userGuideType = $state<GuideType | null>(null);
 	let showTagManager = $state(false);
 	let allTags = $state<Tag[]>([]);
 	let selectedTagIds = $state<string[]>([]);
@@ -85,23 +80,6 @@
 		}
 	}
 
-	async function fetchUserData() {
-		try {
-			const token = await authStore.getIdToken();
-			if (!token) return;
-
-			const response = await fetch('/api/user', {
-				headers: { Authorization: `Bearer ${token}` }
-			});
-
-			if (!response.ok) return;
-
-			const user = await response.json();
-			userGuideType = user.selectedGuide;
-		} catch (e) {
-			console.error('Error fetching user data:', e);
-		}
-	}
 
 	function toggleTagFilter(tagId: string) {
 		if (selectedTagIds.includes(tagId)) {
@@ -123,7 +101,6 @@
 
 	// Fetch on mount
 	onMount(() => {
-		fetchUserData();
 		fetchPeople();
 		fetchTags();
 	});
@@ -142,19 +119,6 @@
 
 	function handlePersonClick(personId: string) {
 		selectedPersonId = personId;
-		selectedGuide = false;
-	}
-
-	function handleGuideClick() {
-		selectedGuide = true;
-		selectedPersonId = null;
-	}
-
-	function handleGuideChanged() {
-		// Refresh user data to get new guide
-		fetchUserData();
-		// Keep guide panel open to show the new guide
-		selectedGuide = true;
 	}
 
 	function handlePersonDeleted() {
@@ -190,24 +154,25 @@
 			console.error('Error creating person:', e);
 		}
 	}
+
 </script>
 
 <Sidebar />
 
 <div class="ml-16 flex h-screen bg-gray-50">
-	<!-- Left sidebar - People list -->
-	<div class="w-96 bg-white border-r border-gray-200 flex flex-col">
-		<!-- Header -->
-		<div class="p-4 border-b border-gray-200">
-			<div class="flex items-center justify-between mb-4">
-				<h1 class="text-2xl font-bold">People</h1>
-				<button
-					onclick={handleAddPerson}
-					class="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
-				>
-					Add Person
-				</button>
-			</div>
+		<!-- Left sidebar - People list -->
+		<div class="w-96 bg-white border-r border-gray-200 flex flex-col">
+			<!-- Header -->
+			<div class="p-4 border-b border-gray-200">
+				<div class="flex items-center justify-between mb-4">
+					<h1 class="text-2xl font-bold">People</h1>
+					<button
+						onclick={handleAddPerson}
+						class="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+					>
+						Add Person
+					</button>
+				</div>
 
 			<!-- Search -->
 			<div class="relative">
@@ -288,12 +253,6 @@
 				</div>
 			{:else}
 				<div>
-					<!-- Guide Card (always at top if user has one) -->
-					{#if userGuideType}
-						<GuideCard guide={getGuide(userGuideType)} selected={selectedGuide} onclick={handleGuideClick} />
-						<div class="border-b-2 border-gray-300"></div>
-					{/if}
-
 					<!-- Regular People Cards -->
 					{#if people.length === 0}
 						<div class="flex items-center justify-center h-64">
@@ -301,11 +260,8 @@
 								<p class="mb-2">No people found</p>
 								{#if searchQuery}
 									<p class="text-sm">Try a different search</p>
-								{:else if userGuideType}
-									<p class="text-sm">
-										Your guide {getGuide(userGuideType).name} is here to help! Start by adding your first
-										friend.
-									</p>
+								{:else}
+									<p class="text-sm">Start by adding your first friend</p>
 								{/if}
 							</div>
 						</div>
@@ -328,15 +284,9 @@
 		</div>
 	</div>
 
-	<!-- Right panel - Person detail or Guide panel -->
+	<!-- Right panel - Person detail -->
 	<div class="flex-1 bg-gray-50">
-		{#if selectedGuide && userGuideType}
-			<GuidePanel
-				guide={getGuide(userGuideType)}
-				onClose={() => (selectedGuide = false)}
-				onGuideChanged={handleGuideChanged}
-			/>
-		{:else if selectedPersonId}
+		{#if selectedPersonId}
 			<PersonPanel personId={selectedPersonId} onPersonDeleted={handlePersonDeleted} />
 		{:else}
 			<div class="flex items-center justify-center h-full">

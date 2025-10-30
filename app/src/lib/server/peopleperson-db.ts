@@ -20,11 +20,15 @@ import type {
 	Entry,
 	EntryCreate,
 	EntryUpdate,
+	JournalEntry,
+	JournalEntryCreate,
+	JournalEntryUpdate,
 	PersonAssociation,
 	PersonAssociationCreate,
 	PersonFilter,
 	TagFilter,
-	NotebookEntryFilter
+	NotebookEntryFilter,
+	JournalEntryFilter
 } from '$lib/types';
 
 /**
@@ -714,6 +718,121 @@ export async function updateEntry(
 	};
 
 	await db.doc(`${getUserPath(userId)}/entries/${entryId}`).update(updateData);
+}
+
+// ============================================================================
+// Journal Operations
+// ============================================================================
+
+/**
+ * Get journal entries for a user
+ */
+export async function getJournalEntries(
+	userId: string,
+	filter?: JournalEntryFilter
+): Promise<JournalEntry[]> {
+	const db = getDB();
+	let query = db.collection(`${getUserPath(userId)}/journal`);
+
+	// Apply filters
+	if (filter?.personId) {
+		query = query.where('peopleIds', 'array-contains', filter.personId) as any;
+	}
+	if (filter?.conversationStatus) {
+		query = query.where('conversationStatus', '==', filter.conversationStatus) as any;
+	}
+	if (filter?.startDate) {
+		query = query.where('date', '>=', filter.startDate) as any;
+	}
+	if (filter?.endDate) {
+		query = query.where('date', '<=', filter.endDate) as any;
+	}
+
+	// Apply sorting
+	const sortOrder = filter?.sortOrder || 'desc';
+	query = query.orderBy('date', sortOrder) as any;
+
+	// Apply limit
+	if (filter?.limit) {
+		query = query.limit(filter.limit) as any;
+	}
+
+	const snapshot = await query.get();
+	const entries: JournalEntry[] = [];
+
+	snapshot.forEach((doc) => {
+		entries.push({ id: doc.id, ...doc.data() } as JournalEntry);
+	});
+
+	return entries;
+}
+
+/**
+ * Get a single journal entry by ID
+ */
+export async function getJournalEntry(
+	userId: string,
+	entryId: string
+): Promise<JournalEntry | null> {
+	const db = getDB();
+	const doc = await db.doc(`${getUserPath(userId)}/journal/${entryId}`).get();
+
+	if (!doc.exists) {
+		return null;
+	}
+
+	return { id: doc.id, ...doc.data() } as JournalEntry;
+}
+
+/**
+ * Create a journal entry
+ */
+export async function createJournalEntry(
+	userId: string,
+	data: JournalEntryCreate
+): Promise<JournalEntry> {
+	const db = getDB();
+	const now = Timestamp.now();
+
+	const entryData = {
+		date: data.date,
+		content: data.content,
+		peopleIds: data.peopleIds || [],
+		aiResponse: data.aiResponse || null,
+		conversationWith: data.conversationWith || null,
+		conversationStatus: data.conversationStatus || null,
+		createdAt: now,
+		updatedAt: now
+	};
+
+	const docRef = await db.collection(`${getUserPath(userId)}/journal`).add(entryData);
+
+	return { id: docRef.id, ...entryData } as JournalEntry;
+}
+
+/**
+ * Update a journal entry
+ */
+export async function updateJournalEntry(
+	userId: string,
+	entryId: string,
+	data: JournalEntryUpdate
+): Promise<void> {
+	const db = getDB();
+	const updateData = {
+		...data,
+		updatedAt: Timestamp.now()
+	};
+
+	await db.doc(`${getUserPath(userId)}/journal/${entryId}`).update(updateData);
+}
+
+/**
+ * Delete a journal entry
+ */
+export async function deleteJournalEntry(userId: string, entryId: string): Promise<void> {
+	const db = getDB();
+	await db.doc(`${getUserPath(userId)}/journal/${entryId}`).delete();
 }
 
 // ============================================================================

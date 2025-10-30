@@ -6,7 +6,6 @@
 	interface Props {
 		guide: Guide;
 		onClose: () => void;
-		onGuideChanged?: () => void;
 	}
 
 	interface ChatMessage {
@@ -15,57 +14,15 @@
 		extraction?: ExtractionResponse;
 	}
 
-	let { guide, onClose, onGuideChanged }: Props = $props();
+	let { guide, onClose }: Props = $props();
 	let activeTab = $state<'profile' | 'messages'>('profile');
 	let messages = $state<Message[]>([]);
-	let changingGuide = $state(false);
 
 	// Chat state
 	let chatMessages = $state<ChatMessage[]>([]);
 	let userInput = $state('');
 	let sending = $state(false);
 	let sessionContacts = $state<any[]>([]);
-
-	async function handleChangeGuide() {
-		if (changingGuide) return;
-
-		const newGuideType = guide.type === 'Scout' ? 'Nico' : 'Scout';
-		const confirmMessage = `Switch from ${guide.name} to ${newGuideType}? Your guide will be updated.`;
-
-		if (!confirm(confirmMessage)) {
-			return;
-		}
-
-		changingGuide = true;
-
-		try {
-			const token = await authStore.getIdToken();
-			if (!token) throw new Error('Not authenticated');
-
-			const response = await fetch('/api/user/guide', {
-				method: 'PATCH',
-				headers: {
-					'Content-Type': 'application/json',
-					Authorization: `Bearer ${token}`
-				},
-				body: JSON.stringify({ guideType: newGuideType })
-			});
-
-			if (!response.ok) {
-				throw new Error('Failed to change guide');
-			}
-
-			// Notify parent to refresh
-			if (onGuideChanged) {
-				onGuideChanged();
-			}
-		} catch (error) {
-			console.error('Error changing guide:', error);
-			alert('Failed to change guide. Please try again.');
-		} finally {
-			changingGuide = false;
-		}
-	}
 
 	async function handleSendMessage(e: Event) {
 		e.preventDefault();
@@ -230,25 +187,11 @@
 					<p class="text-gray-600">{guide.personality}</p>
 				</div>
 
-				<!-- Divider -->
+				<!-- Settings Link -->
 				<div class="border-t pt-6">
-					<h3 class="text-lg font-semibold text-gray-900 mb-4">Change Your Guide</h3>
-					<p class="text-sm text-gray-600 mb-4">
-						Want to switch things up? You can change your guide at any time.
+					<p class="text-sm text-gray-600">
+						Want to chat with someone new? Visit <a href="/settings" class="text-blue-600 hover:text-blue-700 font-medium">Settings</a> to change your guide.
 					</p>
-
-					<!-- Change Guide Button -->
-					<button
-						onclick={handleChangeGuide}
-						disabled={changingGuide}
-						class="w-full py-3 px-4 bg-purple-100 text-purple-700 rounded-lg font-medium hover:bg-purple-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-					>
-						{#if changingGuide}
-							Changing guide...
-						{:else}
-							Switch to {guide.type === 'Scout' ? 'Nico' : 'Scout'} 🔄
-						{/if}
-					</button>
 				</div>
 			</div>
 		{:else if activeTab === 'messages'}

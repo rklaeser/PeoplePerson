@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { authStore } from '$lib/stores/auth.svelte';
-	import type { Person, NotebookEntry, Message, Tag } from '$lib/types';
+	import type { Person, NotebookEntry, Message, Tag, JournalEntry } from '$lib/types';
 	import { formatDistance, format } from 'date-fns';
 	import TagManager from './TagManager.svelte';
 	import AddMemoryModal from './AddMemoryModal.svelte';
@@ -17,7 +17,8 @@
 	let person = $state<Person | null>(null);
 	let memories = $state<NotebookEntry[]>([]);
 	let messages = $state<Message[]>([]);
-	let activeTab = $state<'profile' | 'memories' | 'messages'>('profile');
+	let journalEntries = $state<JournalEntry[]>([]);
+	let activeTab = $state<'profile' | 'memories' | 'messages' | 'journal'>('profile');
 	let saving = $state(false);
 	let showTagManager = $state(false);
 	let showAddMemoryModal = $state(false);
@@ -43,11 +44,31 @@
 			person = data.person;
 			memories = data.memories || [];
 			messages = data.messages || [];
+
+			// Fetch journal entries that mention this person
+			await fetchJournalEntries();
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to load person';
 			console.error('Error:', e);
 		} finally {
 			loading = false;
+		}
+	}
+
+	async function fetchJournalEntries() {
+		try {
+			const token = await authStore.getIdToken();
+			if (!token) return;
+
+			const response = await fetch(`/api/journal?personId=${personId}&sortOrder=desc`, {
+				headers: { Authorization: `Bearer ${token}` }
+			});
+
+			if (response.ok) {
+				journalEntries = await response.json();
+			}
+		} catch (e) {
+			console.error('Error fetching journal entries:', e);
 		}
 	}
 
@@ -384,6 +405,14 @@
 						: 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}"
 				>
 					Messages ({messages.length})
+				</button>
+				<button
+					onclick={() => (activeTab = 'journal')}
+					class="px-6 py-3 text-sm font-medium border-b-2 transition-colors {activeTab === 'journal'
+						? 'border-blue-500 text-blue-600'
+						: 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}"
+				>
+					Journal ({journalEntries.length})
 				</button>
 			</nav>
 		</div>
@@ -724,6 +753,47 @@
 									</span>
 								</div>
 								<p class="text-gray-900">{message.body}</p>
+							</div>
+						{/each}
+					{/if}
+				</div>
+			{:else if activeTab === 'journal'}
+				<div class="divide-y divide-gray-100">
+					{#if journalEntries.length === 0}
+						<div class="p-6 text-center text-gray-500">
+							<p>No journal entries mention {person.name}</p>
+							<p class="text-sm mt-2">Create a journal entry to start reflecting on your relationship</p>
+						</div>
+					{:else}
+						{#each journalEntries as entry (entry.id)}
+							<div class="p-6">
+								<div class="flex items-start justify-between mb-3">
+									<span class="text-sm font-medium text-gray-900">
+										{format(new Date(entry.date), 'MMMM d, yyyy')}
+									</span>
+									{#if entry.conversationStatus === 'planned'}
+										<span class="text-xs px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full">
+											Conversation Planned
+										</span>
+									{:else if entry.conversationStatus === 'completed'}
+										<span class="text-xs px-2 py-0.5 bg-green-100 text-green-800 rounded-full">
+											Discussed
+										</span>
+									{/if}
+								</div>
+
+								<!-- Entry preview -->
+								<p class="text-gray-700 line-clamp-3 mb-3 whitespace-pre-wrap">
+									{entry.content}
+								</p>
+
+								<!-- View full entry link -->
+								<a
+									href="/people?view=journal&entryId={entry.id}"
+									class="text-sm text-blue-600 hover:text-blue-700 font-medium"
+								>
+									View full entry →
+								</a>
 							</div>
 						{/each}
 					{/if}

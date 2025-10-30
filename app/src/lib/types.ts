@@ -117,6 +117,18 @@ export interface Entry {
 	updatedAt: Timestamp;
 }
 
+export interface JournalEntry {
+	id: string; // Firestore document ID
+	date: string; // YYYY-MM-DD format
+	content: string; // User's journal entry
+	peopleIds: string[]; // IDs of people mentioned (for bidirectional linking)
+	aiResponse: string | null; // AI-generated insights, questions, conversation plans (markdown formatted)
+	conversationWith: string | null; // personId if planning conversation
+	conversationStatus: ConversationStatus | null;
+	createdAt: Timestamp;
+	updatedAt: Timestamp;
+}
+
 export interface PersonAssociation {
 	id: string; // Firestore document ID
 	personId: string;
@@ -138,6 +150,8 @@ export type ChangeType = 'prompt' | 'manual';
 export type ProcessingStatus = 'pending' | 'processing' | 'completed' | 'failed';
 
 export type IntentChoice = 'core' | 'archive' | 'new' | 'develop' | 'casual';
+
+export type ConversationStatus = 'planned' | 'completed';
 
 // ============================================================================
 // Create/Update DTOs (Data Transfer Objects)
@@ -257,6 +271,23 @@ export interface EntryUpdate {
 	personIds?: string[];
 }
 
+export interface JournalEntryCreate {
+	date: string; // YYYY-MM-DD
+	content: string;
+	peopleIds?: string[];
+	aiResponse?: string | null;
+	conversationWith?: string | null;
+	conversationStatus?: ConversationStatus | null;
+}
+
+export interface JournalEntryUpdate {
+	content?: string;
+	peopleIds?: string[];
+	aiResponse?: string | null;
+	conversationWith?: string | null;
+	conversationStatus?: ConversationStatus | null;
+}
+
 export interface PersonAssociationCreate {
 	personId: string;
 	associateId: string;
@@ -340,6 +371,15 @@ export interface TagFilter {
 }
 
 export interface NotebookEntryFilter {
+	startDate?: string; // YYYY-MM-DD
+	endDate?: string; // YYYY-MM-DD
+	sortOrder?: 'asc' | 'desc';
+	limit?: number;
+}
+
+export interface JournalEntryFilter {
+	personId?: string; // Filter by person mentioned
+	conversationStatus?: ConversationStatus; // Filter by conversation status
 	startDate?: string; // YYYY-MM-DD
 	endDate?: string; // YYYY-MM-DD
 	sortOrder?: 'asc' | 'desc';
