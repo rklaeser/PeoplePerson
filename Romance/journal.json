@@ -1,0 +1,377 @@
+{
+  "$schema": "journal-schema-v1",
+  "description": "Journal entries for processing feelings and thoughts about the relationship",
+  "lastUpdated": "2025-10-28",
+  "entries": [
+    {
+      "id": "entry-001",
+      "date": "2025-10-23T14:45:00Z",
+      "entry": "I think that I am really at a stage right now where I feel like I need help. I haven't responded to Kiara who said goodbye last night, and I feel like I want to explain to her why I left so soon. It was that I felt like I needed to run back to Jordan so that she wouldn't be jealous. I think I'm afraid that if I talk to Kiara, I will come to the realization that Jordan and I need to break up.",
+      "emotions": [
+        "conflicted",
+        "afraid",
+        "uncertain",
+        "guilty"
+      ],
+      "topics": [
+        "communication",
+        "jealousy",
+        "relationship_doubts",
+        "avoidance"
+      ],
+      "people": [
+        "Jordan",
+        "Kiara"
+      ]
+    },
+    {
+      "id": "entry-002",
+      "date": "2025-10-23T14:47:00Z",
+      "entry": "I also have the timing of considering going to London with Jordan right now. And buying my ticket. And I'm not sure that's something I want to do given these feelings.",
+      "emotions": [
+        "uncertain",
+        "pressured",
+        "hesitant"
+      ],
+      "topics": [
+        "commitment",
+        "decision_pressure",
+        "relationship_doubts",
+        "future_planning"
+      ],
+      "people": [
+        "Jordan"
+      ],
+      "decisions": [
+        {
+          "description": "Buy ticket to London with Jordan",
+          "status": "pending",
+          "timeframe": "right now"
+        }
+      ]
+    },
+    {
+      "id": "entry-003",
+      "date": "2025-10-23T14:50:00Z",
+      "entry": "I think a fundamental question beyond this is whether Jordan's jealousy is reasonable. I think that it's still not clear to me what constitutes an appropriate relationship with women other than your partner. Jordan always uses Chloe's friend, guy friend, runner pal as an example of an okay relationship. I think that what Jordan doesn't like about my relationship with Kiara is because I actually spend far less time than Chloe does with her guy friend. She doesn't like that Kiara helps me emotionally process things.",
+      "emotions": [
+        "confused",
+        "frustrated",
+        "questioning"
+      ],
+      "topics": [
+        "boundaries",
+        "jealousy",
+        "emotional_support",
+        "double_standards",
+        "friendship_boundaries"
+      ],
+      "people": [
+        "Jordan",
+        "Kiara",
+        "Chloe",
+        "Chloe's guy friend"
+      ],
+      "questions": [
+        "Is Jordan's jealousy reasonable?",
+        "What constitutes an appropriate relationship with women other than your partner?",
+        "Why is time spent okay but emotional processing not okay?"
+      ],
+      "insights": [
+        "The issue isn't time spent with Kiara - it's that Kiara provides emotional support",
+        "Jordan's boundary seems inconsistent - Chloe spends more time with her guy friend but that's seen as okay",
+        "The real boundary appears to be about emotional intimacy, not time or activity"
+      ]
+    },
+    {
+      "id": "entry-004",
+      "date": "2025-10-23T14:52:00Z",
+      "entry": "I think something that would give me stability or certainty of feeling is being able to point to relationships where someone, in a cross-sex relationship, helps you process your emotions that are positive examples.",
+      "emotions": [
+        "seeking_clarity",
+        "uncertain"
+      ],
+      "topics": [
+        "boundaries",
+        "validation",
+        "friendship_models",
+        "normalizing_emotional_support"
+      ],
+      "needs": [
+        "Examples of healthy cross-sex friendships with emotional support",
+        "External validation that emotional processing in friendships is appropriate",
+        "Evidence to evaluate Jordan's boundary against"
+      ]
+    },
+    {
+      "id": "entry-005",
+      "date": "2025-10-23T14:58:00Z",
+      "entry": "I think it's reasonable to explain that after this big fight that we had, signing up to London feels weird. Like it feels like a step that's kind of demonstrating my commitment to the relationship. But it also feels like we haven't solved a big problem.",
+      "emotions": [
+        "conflicted",
+        "hesitant",
+        "uncertain"
+      ],
+      "topics": [
+        "commitment",
+        "unresolved_conflict",
+        "decision_pressure",
+        "relationship_doubts"
+      ],
+      "people": [
+        "Jordan"
+      ],
+      "insights": [
+        "Buying the London ticket would be a gesture of commitment",
+        "Making that commitment feels premature when the fundamental issue about friendship boundaries is unresolved",
+        "There's pressure to demonstrate commitment vs. need to resolve the underlying problem first"
+      ]
+    },
+    {
+      "id": "entry-006",
+      "date": "2025-10-23T15:02:00Z",
+      "entry": "I want to tell her that I do feel loss for the friends I'm not interacting with but that I don't necessarily think her boundaries are wrong. I'm still figuring out what boundaries I think are fair. I want to tell her that I avoided thinking about this all day but then I spent some time at 5 and this is the conclusion I came to. That if I'm going to have a reduced relationship with Kiara that I want to talk that through with Kiara. I think I can go to England regardless but I want to have this plan. I think what I tell Kiara in that text (todos.json) is that I'm struggling to figure out how to balance having female friends while in a relationship. I think that's a really fair problem to have (not a problem to be embarrassed about - this is important). And it's a problem that lots of people probably have. Rushing off without saying goodbye was a symptom of that.",
+      "emotions": [
+        "clear",
+        "resolved",
+        "validated"
+      ],
+      "topics": [
+        "communication_plan",
+        "boundaries",
+        "friendship_boundaries",
+        "self-compassion",
+        "decision_making"
+      ],
+      "people": [
+        "Jordan",
+        "Kiara"
+      ],
+      "planForJordan": [
+        "Acknowledge feeling loss for friends I'm not interacting with",
+        "Don't necessarily think her boundaries are wrong - still figuring out what I think is fair",
+        "I avoided thinking about this all day, then spent time at 5pm processing",
+        "Conclusion: If I'm going to have a reduced relationship with Kiara, I want to talk that through with Kiara first",
+        "I can go to England but I want this plan in place first"
+      ],
+      "planForKiara": [
+        "Tell her I'm struggling to figure out how to balance having female friends while in a relationship",
+        "Frame this as a fair, normal problem - not something to be embarrassed about",
+        "Explain that rushing off without saying goodbye was a symptom of this struggle"
+      ],
+      "insights": [
+        "This is a common problem, not something to be ashamed of",
+        "I need to have agency in how I transition the relationship with Kiara",
+        "I can commit to London if I have a plan for handling the friendship situation first",
+        "Being honest with Kiara about the struggle is the right approach"
+      ]
+    },
+    {
+      "id": "entry-007",
+      "date": "2025-10-24T00:00:00Z",
+      "entry": "I'm noticing a pattern I want to talk through with Kiara: Why don't Jordan and my galpals get along? Jordan is very defensive and that's part of it, but I'm also picking up on signals from my friends. Miles and Halle - I remember Miles talking about trouble with a specific guy friend of Halle's. Halle didn't seem to like Jordan, and I wonder if Halle is picking up on something I'm not seeing. Then there was dinner with Carly and Chase. I thought it went okay, but Jordan didn't like when conversations broke off (Carly talking to me, Jordan talking to Chase). Carly definitely doesn't like Jordan - when we got pizza, she asked something like 'Why are you still with her?' Angie said the same thing - first thing she said to me. I understand that I haven't seen you guys, and that's directly or indirectly attributed to Jordan. But what you guys haven't seen is how good the relationship has been for me - how I've addressed things I've been avoiding, like my health and job search. Jordan hasn't been saying 'Reed, you need to do these things' - she's helped me find the confidence to escape a funk.",
+      "emotions": [
+        "defensive",
+        "confused",
+        "conflicted",
+        "appreciative"
+      ],
+      "topics": [
+        "friend_reactions",
+        "relationship_benefits",
+        "isolation_from_friends",
+        "pattern_recognition",
+        "relationship_doubts"
+      ],
+      "people": [
+        "Jordan",
+        "Kiara",
+        "Miles",
+        "Halle",
+        "Carly",
+        "Chase",
+        "Angie"
+      ],
+      "questionsForKiara": [
+        "Why don't Jordan and my galpals get along?",
+        "Is Halle picking up on something I'm not seeing?",
+        "Why are multiple friends independently asking 'Why are you still with her?'",
+        "Am I being isolated from friends, or is this just natural relationship adjustment?",
+        "What am I not seeing about this relationship?"
+      ],
+      "observations": [
+        {
+          "person": "Halle",
+          "observation": "Didn't seem to like Jordan",
+          "context": "Miles had talked about having trouble with a specific guy friend of Halle's - interesting parallel"
+        },
+        {
+          "person": "Carly",
+          "observation": "Asked 'Why are you still with her?' at pizza",
+          "context": "Dinner with Carly and Chase where Jordan didn't like conversations breaking off into pairs"
+        },
+        {
+          "person": "Angie",
+          "observation": "First thing she said was questioning why I'm with Jordan"
+        }
+      ],
+      "relationshipBenefits": [
+        "Addressed health issues I'd been avoiding",
+        "Made progress on job search",
+        "Found confidence to escape a funk",
+        "Jordan helps by supporting, not pushing"
+      ],
+      "insights": [
+        "There's a pattern - multiple female friends independently don't like Jordan or question the relationship",
+        "I acknowledge I haven't seen these friends as much, attributed to Jordan",
+        "I feel defensive about the relationship because there ARE real benefits",
+        "I need Kiara's perspective on what my friends might be seeing that I'm not",
+        "The parallel with Miles having trouble with Halle's guy friend is interesting - maybe this is normal relationship boundary stuff?"
+      ],
+      "purposeOfDiscussion": "I need to talk through this pattern with Kiara. She knows me well and might help me see if there's something I'm missing, or help me understand if this is just normal relationship adjustment vs. a red flag."
+    },
+    {
+      "id": "entry-008",
+      "date": "2025-10-28T00:00:00Z",
+      "entry": "I'm thinking about a conversation I had with Jordan, maybe two nights ago, about our schedule for the week - specifically what places we'd be staying at. I mentioned that on Tuesday we could maybe just not see each other, and she responded poorly to that. I think she probably felt like I was pulling back. What I was really trying to do was respond to the fact that we had just spent the last three weeks together every day. I was thinking it could be healthy to have a day now and then just to reflect on your own. That would be a big part of not losing the I in the relationship - which is actually a phrase she says: 'find the we without losing the I.' I want to try and have this conversation again and propose that at some cadence, we spend the night on our own and just use that space as we will. I think that would be healthy, but I want to do this in a way that does not make her scared.",
+      "emotions": [
+        "thoughtful",
+        "cautious",
+        "intentional",
+        "caring"
+      ],
+      "topics": [
+        "personal_space",
+        "boundaries",
+        "communication",
+        "relationship_health",
+        "independence"
+      ],
+      "people": [
+        "Jordan"
+      ],
+      "insights": [
+        "We've spent three weeks together every day - that's a lot of togetherness",
+        "Having regular alone time could help preserve individuality ('the I')",
+        "Jordan's own phrase about 'finding the we without losing the I' supports this idea",
+        "Her negative reaction suggests she might have felt I was pulling back, not that I was proposing healthy space",
+        "The way I frame this conversation matters - I need to emphasize love and connection, not distance"
+      ],
+      "conversationPlan": {
+        "goal": "Propose a regular cadence of nights apart for individual reflection time",
+        "approach": "Lead with love and affirmation, frame it as supporting our relationship health",
+        "opening": "I love you, and I love spending time with you, and I love that we spend almost every day together.",
+        "keyPoints": [
+          "Start with affirmation of love and appreciation for our time together",
+          "Reference her own wisdom: 'find the we without losing the I'",
+          "Explain that three weeks of daily togetherness made me realize we need intentional space for the 'I'",
+          "Propose this as something that will strengthen us, not pull us apart",
+          "Frame it as mutual benefit - we both need space to reflect and maintain our individual selves",
+          "Suggest a specific, reasonable cadence (maybe one night per week or every other week?)",
+          "Emphasize this is about health and sustainability, not pulling back"
+        ],
+        "concernsToAddress": [
+          "She might feel I'm pulling back or losing interest",
+          "She might feel rejected or abandoned",
+          "She might think this is about the other issues we've been having",
+          "She might see this as the beginning of the end"
+        ],
+        "reassurances": [
+          "This is about making our relationship stronger and more sustainable",
+          "This supports the 'we' by protecting the 'I'",
+          "This is normal and healthy in long-term relationships",
+          "I'm not pulling back - I'm investing in being my best self for us"
+        ]
+      }
+    },
+    {
+      "id": "entry-009",
+      "date": "2025-10-28T00:00:00Z",
+      "entry": "I'm talking to my dad in about an hour. I've been working on something that he probably thinks I'm behind on and haven't been showing progress on. It's a tool for evaluating companies that we would purchase with his money and that I would run. I expect he would like to see what I've been working on and find it impressive, but also recognize that I haven't been communicating. I also want to show him something separate - that I am looking into jobs. I'm thinking of proposing: 'Hey, if you have some time Thursday morning, I'd like to talk to you about my approach for looking at jobs.'",
+      "emotions": [
+        "anxious",
+        "prepared",
+        "hopeful",
+        "slightly guilty"
+      ],
+      "topics": [
+        "father_relationship",
+        "career",
+        "communication",
+        "accountability",
+        "business_partnership"
+      ],
+      "people": [
+        "Dad"
+      ],
+      "context": {
+        "project": "Company evaluation tool for potential acquisitions",
+        "stakes": "Would use dad's money to purchase, I would run the company",
+        "issue": "Dad probably thinks I'm behind and haven't been showing progress",
+        "reality": "I have been working on it and have something impressive to show"
+      },
+      "insights": [
+        "I've been working but not communicating progress - that's a pattern I need to address",
+        "I have something substantive to show, which should demonstrate my commitment",
+        "I need to acknowledge the lack of communication, not just ignore it",
+        "Showing both the company tool AND job search demonstrates I'm taking multiple paths seriously",
+        "Proposing Thursday for job search discussion shows initiative and organization"
+      ],
+      "conversationPlan": {
+        "timing": "In about one hour",
+        "goals": [
+          "Show progress on company evaluation tool",
+          "Demonstrate it's impressive and substantive work",
+          "Acknowledge lack of communication",
+          "Show I'm also actively looking at jobs",
+          "Propose Thursday meeting to discuss job search approach"
+        ],
+        "structure": {
+          "part1_companyTool": {
+            "approach": "Lead with the work, acknowledge the gap",
+            "keyPoints": [
+              "Show the company evaluation tool",
+              "Walk through what it does and how it works",
+              "Explain the thinking behind the approach",
+              "Acknowledge: 'I know I haven't been communicating about progress, and I should have been updating you more regularly'",
+              "Don't make excuses - just acknowledge and move forward"
+            ]
+          },
+          "part2_jobSearch": {
+            "approach": "Show parallel effort on traditional career path",
+            "keyPoints": [
+              "Transition: 'I'm also working on another track - looking at jobs'",
+              "Briefly show evidence of job search activity",
+              "Propose: 'If you have some time Thursday morning, I'd like to talk to you about my approach for looking at jobs'",
+              "This shows I'm taking multiple paths seriously, not putting all eggs in one basket"
+            ]
+          }
+        },
+        "openings": {
+          "option1": "Hey Dad, I want to show you what I've been working on with the company evaluation tool. I know I haven't been keeping you updated on progress, and I should have been - but I've made some real progress I'm excited to show you.",
+          "option2": "I've been working on the company evaluation tool and wanted to walk you through what I've built. I realize I haven't been communicating about this, which I need to get better at, but I think you'll find what I've put together is pretty solid."
+        },
+        "thursdayProposal": "If you have some time Thursday morning, I'd like to talk to you about my approach for looking at jobs.",
+        "concernsToAddress": [
+          "He might be frustrated about lack of communication",
+          "He might question whether I'm serious about this",
+          "He might wonder if I'm focusing too much on the acquisition idea vs. getting a job",
+          "He might think I'm not making progress"
+        ],
+        "whatToAvoid": [
+          "Making excuses for not communicating",
+          "Being defensive",
+          "Overselling the tool before showing it",
+          "Downplaying the importance of job search"
+        ],
+        "successCriteria": [
+          "Dad sees the tool and recognizes it's substantive work",
+          "He feels heard about the communication gap (I acknowledge it)",
+          "He sees I'm taking both paths seriously (acquisition + job search)",
+          "We have Thursday meeting scheduled to discuss job search",
+          "Conversation ends on positive, forward-looking note"
+        ]
+      }
+    }
+  ]
+}

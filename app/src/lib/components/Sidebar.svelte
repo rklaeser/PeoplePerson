@@ -2,14 +2,17 @@
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
+	import IconHome from '~icons/lucide/home';
+	import IconTable from '~icons/lucide/table';
+	import IconMap from '~icons/lucide/map';
 
 	let expanded = $state(false);
 	let showAccountMenu = $state(false);
 
 	const navItems = [
-		{ id: 'home', label: 'Home', icon: '🏠', href: '/people' },
-		{ id: 'table', label: 'Table', icon: '📊', href: '/table' },
-		{ id: 'map', label: 'Map', icon: '🗺️', href: '/map' }
+		{ id: 'home', label: 'Home', icon: IconHome, href: '/people' },
+		{ id: 'table', label: 'Table', icon: IconTable, href: '/table' },
+		{ id: 'map', label: 'Map', icon: IconMap, href: '/map' }
 	];
 
 	function handleMouseEnter() {
@@ -51,19 +54,8 @@
 	onmouseleave={handleMouseLeave}
 >
 	<div class="flex flex-col h-full">
-		<!-- Logo -->
-		<div class="h-16 flex items-center justify-center border-b border-gray-200">
-			<div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">
-				{#if expanded}
-					PP
-				{:else}
-					P
-				{/if}
-			</div>
-		</div>
-
 		<!-- Navigation -->
-		<nav class="flex-1 py-4">
+		<nav class="flex-1 pt-4">
 			{#each navItems as item}
 				<button
 					onclick={() => handleNavigation(item.href)}
@@ -72,7 +64,7 @@
 						? 'bg-blue-50 text-blue-600'
 						: 'text-gray-700'}"
 				>
-					<span class="text-2xl flex-shrink-0">{item.icon}</span>
+					<svelte:component this={item.icon} class="w-6 h-6 flex-shrink-0" />
 					{#if expanded}
 						<span class="ml-3 text-sm font-medium">{item.label}</span>
 					{/if}

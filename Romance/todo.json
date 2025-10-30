@@ -1,0 +1,60 @@
+{
+  "$schema": "todo-schema-v1",
+  "description": "Action items and decisions related to relationships",
+  "lastUpdated": "2025-10-24",
+  "todos": [
+    {
+      "id": "todo-001",
+      "created": "2025-10-23T14:55:00Z",
+      "completed": "2025-10-24T00:00:00Z",
+      "status": "completed",
+      "priority": "high",
+      "action": "Text Kiara to apologize and set up a call",
+      "context": "I left quickly last night after she said goodbye, and I want to explain why. After working through my thoughts, I formulated a message that was honest about avoidance and asked for her perspective.",
+      "messageSent": "Hey - sorry I rushed off. I've been avoiding working through some relationship stuff and could use your perspective - rushing off was kind of a symptom of that. Would love to catch up in person, but would a call work if you have time?",
+      "achievement": "Successfully formulated an honest, vulnerable message that acknowledges avoidance behavior, asks for help without demanding it, and opens the door for a meaningful conversation.",
+      "relatedTo": {
+        "journalEntries": ["entry-001", "entry-006", "entry-007"]
+      }
+    },
+    {
+      "id": "todo-002",
+      "created": "2025-10-23T14:55:00Z",
+      "status": "pending",
+      "priority": "high",
+      "action": "Talk to Kiara on the phone",
+      "context": "Have a conversation to get her perspective on relationship dynamics, including: Why don't Jordan and my galpals get along? What might my friends be seeing that I'm not? Is the distance from friends normal relationship adjustment or isolation? Discuss the pattern of multiple friends questioning the relationship.",
+      "dependsOn": ["todo-001"],
+      "relatedTo": {
+        "journalEntries": ["entry-001", "entry-006", "entry-007"]
+      }
+    },
+    {
+      "id": "todo-003",
+      "created": "2025-10-24T00:00:00Z",
+      "status": "pending",
+      "priority": "medium",
+      "action": "Call mom",
+      "context": "Check in with mom"
+    },
+    {
+      "id": "todo-004",
+      "created": "2025-10-24T00:00:00Z",
+      "status": "pending",
+      "priority": "medium",
+      "action": "Reach out to Miles",
+      "context": "Miles had similar relationship boundary experiences with Halle's guy friend - might be helpful to talk through cross-sex friendship dynamics",
+      "relatedTo": {
+        "journalEntries": ["entry-007"]
+      }
+    },
+    {
+      "id": "todo-005",
+      "created": "2025-10-24T00:00:00Z",
+      "status": "pending",
+      "priority": "medium",
+      "action": "Text back Chicago friends",
+      "context": "Reconnect with Chicago friends"
+    }
+  ]
+}

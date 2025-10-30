@@ -1,0 +1,26 @@
+{
+  "$schema": "friendship-boundaries-perspectives-v1",
+  "description": "Collection of perspectives on appropriate boundaries for cross-sex friendships while in a romantic relationship",
+  "lastUpdated": "2025-10-23",
+  "perspectives": [
+    {
+      "id": "perspective-001",
+      "date": "2025-10-23",
+      "source": "Unknown",
+      "sourceType": "article or advice",
+      "stance": "restrictive",
+      "viewpoint": "The person you share your innermost thoughts, worries and fears should be with your partner, the one you're spending your life with. They are the one you should be most comfortable being emotionally vulnerable with. Opening up more to your opposite sex friend could give off the wrong message and…imagine how hurt your partner might be if they found out you had shared something with your friend before them…they could start to feel they are not as important to you.",
+      "keyPrinciples": [
+        "Partner should be primary source of emotional vulnerability",
+        "Sharing innermost thoughts with opposite-sex friend sends wrong message",
+        "Partner may feel less important if you share with friend first",
+        "Emotional hierarchy: partner first, then friends"
+      ],
+      "implications": [
+        "Emotional processing with opposite-sex friends is inappropriate",
+        "Partner should be told things before friends",
+        "Deep emotional intimacy should be reserved for romantic relationship only"
+      ]
+    }
+  ]
+}

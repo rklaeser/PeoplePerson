@@ -1,0 +1,509 @@
+{
+  "$schema": "userstories-schema-v1",
+  "description": "User stories and queries that the career planning data structures must support. Documents what questions should be answerable and by whom.",
+  "lastUpdated": "2025-10-23",
+  "personas": {
+    "reed": {
+      "name": "Reed (Primary User)",
+      "description": "The person making career transition decisions and tracking progress",
+      "primaryNeeds": [
+        "Track job application status and next actions",
+        "Identify skill gaps and learning priorities",
+        "Make strategic decisions about career path",
+        "Maintain motivation by seeing progress"
+      ]
+    },
+    "mentor": {
+      "name": "Career Mentor",
+      "description": "Advisor helping Reed navigate robotics career transition",
+      "primaryNeeds": [
+        "Assess current readiness for roles",
+        "Identify whether intermediate steps are needed",
+        "Understand Reed's values and fit criteria",
+        "Provide targeted advice on skill development"
+      ]
+    },
+    "referrer": {
+      "name": "Potential Referrer/Contact",
+      "description": "Someone considering referring Reed or making an introduction",
+      "primaryNeeds": [
+        "Understand Reed's career goals and interests",
+        "Assess fit for specific company or role",
+        "See evidence of relevant skills and projects",
+        "Understand Reed's commitment to robotics"
+      ]
+    },
+    "future-reed": {
+      "name": "Future Reed",
+      "description": "Reed 6-12 months from now, reviewing past decisions",
+      "primaryNeeds": [
+        "Understand reasoning behind past decisions",
+        "See evolution of thinking and priorities",
+        "Learn from what worked and what didn't",
+        "Track return on investment for learning/networking"
+      ]
+    }
+  },
+  "stories": [
+    {
+      "id": "track-active-applications",
+      "persona": "reed",
+      "story": "As Reed, I want to see all companies I'm actively applying to or interviewing with, so that I can prioritize my time and prepare appropriately",
+      "questions": [
+        "What companies am I actively applying to?",
+        "Which applications need follow-up?",
+        "What interviews do I have coming up?",
+        "Which applications are waiting on me vs. waiting on them?"
+      ],
+      "acceptanceCriteria": [
+        "Can filter companies by status (applying, applied, interviewing)",
+        "Can see timeline of next steps for each application",
+        "Can identify stalled applications that need follow-up",
+        "Can see referral status and who to thank/update"
+      ],
+      "requiredData": {
+        "files": ["companies.json"],
+        "fields": [
+          "companies[].jobInteraction.status",
+          "companies[].jobInteraction.timeline.events",
+          "companies[].jobInteraction.referral"
+        ]
+      },
+      "currentlySatisfied": true,
+      "implementation": {
+        "method": "Filter companies.json by jobInteraction.status",
+        "query": "companies.filter(c => ['applying', 'applied', 'interviewing'].includes(c.jobInteraction.status))",
+        "outputFormat": "List of companies with status, position title, last event date, next action"
+      },
+      "priority": "critical"
+    },
+    {
+      "id": "assess-role-readiness",
+      "persona": "mentor",
+      "story": "As a mentor, I want to assess whether Reed is ready for robotics roles now or needs an intermediate position, so that I can give realistic career advice",
+      "questions": [
+        "Is Reed ready for a robotics job, or does he require an intermediate job to gain skills on the side?",
+        "What are the gaps between Reed's current skills and target roles?",
+        "Which roles are most achievable now vs. which require more preparation?",
+        "What's the minimum viable skillset for entry into robotics?"
+      ],
+      "acceptanceCriteria": [
+        "Can see all skill requirements for target roles",
+        "Can compare required skills vs. current skills",
+        "Can identify critical gaps vs. nice-to-have gaps",
+        "Can see which companies have lower barriers to entry"
+      ],
+      "requiredData": {
+        "files": ["companies.json", "skills.json"],
+        "fields": [
+          "companies[].jobInteraction.position (job requirements)",
+          "companies[].technicalMethods",
+          "skills[].status (proficient vs. not_started/learning)",
+          "skills[].proficiency",
+          "skills[].relevanceToCareer.companyUsage"
+        ]
+      },
+      "currentlySatisfied": true,
+      "gaps": [
+        "No structured job requirements (embedded in position descriptions)",
+        "No automated readiness scoring or gap analysis",
+        "Manual comparison required between skills.json proficient skills and company requirements"
+      ],
+      "implementation": {
+        "method": "Compare proficient skills vs. company technical methods and role requirements",
+        "query": "proficientSkills = skills.filter(s => s.status === 'proficient'); targetRole.requiredSkills.forEach(req => check if exists in proficientSkills)",
+        "outputFormat": "Gap analysis matrix: Role → Required Skills → Current Level (from skills.json) → Gap Severity → Learning Resources (from skills[].resources)"
+      },
+      "priority": "high"
+    },
+    {
+      "id": "find-learning-resources-for-skill",
+      "persona": "reed",
+      "story": "As Reed, I want to find all resources that teach a specific skill (like ROS), so that I can choose the best learning path",
+      "questions": [
+        "What resources teach ROS?",
+        "What's the recommended order for learning robotics fundamentals?",
+        "Which books/courses address my specific skill gaps?",
+        "What are the prerequisites for learning X?"
+      ],
+      "acceptanceCriteria": [
+        "Can search by skill name and find all relevant resources",
+        "Can see resource type (book, course, hands-on project)",
+        "Can see priority and status of each resource",
+        "Can understand learning path dependencies"
+      ],
+      "requiredData": {
+        "files": ["skills.json"],
+        "fields": [
+          "skills[].name",
+          "skills[].resources[] (books, courses, platforms, communities)",
+          "skills[].status",
+          "skills[].priority"
+        ]
+      },
+      "currentlySatisfied": true,
+      "implementation": {
+        "method": "Search skills.json by skill name, return resources array",
+        "query": "skill = skills.find(s => s.name === 'ROS' || s.id === 'ros-middleware'); return skill.resources",
+        "outputFormat": "List of resources (books, courses, communities) with type, status, priority, URLs"
+      },
+      "priority": "high",
+      "enhancements": [
+        "Add prerequisites field to enable dependency tree",
+        "Add estimatedHours to help with time planning"
+      ]
+    },
+    {
+      "id": "identify-role-skill-requirements",
+      "persona": "reed",
+      "story": "As Reed, I want to see what skills are required for a specific company/role (like Chef Robotics), so that I can focus my learning",
+      "questions": [
+        "What skills do I need for Chef Robotics?",
+        "What makes me a good fit for Company X?",
+        "What technical methods does Company Y use?",
+        "Which learning resources map to Company Z's requirements?"
+      ],
+      "acceptanceCriteria": [
+        "Can see technical methods used by any company",
+        "Can link company requirements to learning resources",
+        "Can see mission/domain fit assessment",
+        "Can identify why a specific company is interesting"
+      ],
+      "requiredData": {
+        "files": ["companies.json", "skills.json"],
+        "fields": [
+          "companies[].technicalMethods",
+          "companies[].fit.domain and fit.mission",
+          "companies[].personalResonance",
+          "skills[].relevanceToCareer.companyUsage"
+        ]
+      },
+      "currentlySatisfied": true,
+      "implementation": {
+        "method": "Lookup company in companies.json, find related skills in skills.json",
+        "query": "company = companies.find(c => c.id === 'chef-robotics'); relatedSkills = skills.filter(s => s.relevanceToCareer.companyUsage?.includes('Chef Robotics'))",
+        "outputFormat": "Company profile with technical methods, fit scores, related skills and learning resources"
+      },
+      "priority": "high"
+    },
+    {
+      "id": "track-overall-transition-progress",
+      "persona": "reed",
+      "story": "As Reed, I want to see my overall progress on the robotics transition, so that I stay motivated and can celebrate wins",
+      "questions": [
+        "What's my overall progress on robotics transition?",
+        "How many books have I completed?",
+        "How many applications have I submitted?",
+        "What communities am I actively engaged in?",
+        "What projects have I completed?"
+      ],
+      "acceptanceCriteria": [
+        "Can see completion metrics across all categories",
+        "Can see progress over time (dates)",
+        "Can identify recent wins and momentum",
+        "Can see areas that need more attention"
+      ],
+      "requiredData": {
+        "files": ["companies.json", "skills.json", "communities-and-ecosystems.json", "projects.json"],
+        "fields": [
+          "companies[].jobInteraction.status (count by status)",
+          "skills[].status (proficient, learning, planned, not_started - completion rates)",
+          "communities[].engagement.status",
+          "projects[].status (completed, active, in-progress)"
+        ]
+      },
+      "currentlySatisfied": true,
+      "gaps": [
+        "No aggregated progress dashboard (would need to build)",
+        "No time-series data for tracking momentum over time"
+      ],
+      "implementation": {
+        "method": "Aggregate counts across all career planning data files",
+        "query": "applications = companies.filter(status in ['applying','applied','interviewing']).length; skillsLearning = skills.filter(status in ['learning','planned']).length; projectsCompleted = projects.filter(status === 'completed').length",
+        "outputFormat": "Dashboard with: Applications (by status), Skills (proficient/learning/planned counts), Communities (engagement level), Projects (completed/in-progress/planned)"
+      },
+      "priority": "medium"
+    },
+    {
+      "id": "evaluate-network-investment-roi",
+      "persona": "future-reed",
+      "story": "As Future Reed, I want to understand which networking investments paid off, so that I can optimize my strategy going forward",
+      "questions": [
+        "Which conferences led to valuable connections or opportunities?",
+        "Which communities have been most valuable for learning/networking?",
+        "Did engaging with Noisebridge lead to any outcomes?",
+        "What was the ROI on attending Imagine Edge AI conference?"
+      ],
+      "acceptanceCriteria": [
+        "Can track outcomes from each networking activity",
+        "Can measure value (connections made, skills learned, opportunities)",
+        "Can see cost vs. benefit for each investment",
+        "Can identify patterns in what works"
+      ],
+      "requiredData": {
+        "files": ["networking-opportunities.json", "communities-and-ecosystems.json", "MISSING: contacts.json"],
+        "fields": [
+          "networking-opportunities[].attendance.status",
+          "communities[].engagement.notes",
+          "MISSING: cost, outcomes, connections made, follow-up actions"
+        ]
+      },
+      "currentlySatisfied": false,
+      "gaps": [
+        "No cost tracking for conferences/events",
+        "No outcomes or ROI tracking",
+        "No contacts.json to link people to sources",
+        "No post-event follow-up tracking"
+      ],
+      "implementation": {
+        "method": "NOT YET IMPLEMENTED - Would require cost/outcome tracking",
+        "query": "Need: cost, outcomes, connections made for each event/community",
+        "outputFormat": "ROI analysis: Event → Cost → Outcomes (connections, opportunities, learning) → Value assessment"
+      },
+      "priority": "medium"
+    },
+    {
+      "id": "explain-career-strategy-to-referrer",
+      "persona": "referrer",
+      "story": "As a potential referrer, I want to understand Reed's career strategy and commitment to robotics, so that I feel confident making an introduction",
+      "questions": [
+        "Why is Reed interested in robotics?",
+        "What's Reed's background and relevant experience?",
+        "How committed is Reed to this transition (is this just curiosity or serious)?",
+        "What kinds of roles/companies is Reed targeting?",
+        "What has Reed done to prepare for this transition?"
+      ],
+      "acceptanceCriteria": [
+        "Can see clear narrative of career transition motivation",
+        "Can see evidence of preparation (books, projects, communities)",
+        "Can see values and fit criteria (mission, domain)",
+        "Can see target companies and why they fit"
+      ],
+      "requiredData": {
+        "files": ["companies.json", "skills.json", "communities-and-ecosystems.json", "projects.json", "MISSING: career-narrative.json or profile.json"],
+        "fields": [
+          "companies[].personalResonance",
+          "companies[].fit (shows values)",
+          "skills[].status (shows learning effort and current proficiency)",
+          "skills[].evidence (shows proof of skills)",
+          "projects[].relevanceToCareer (shows hands-on work and commitment)",
+          "projects[].skillsDemonstrated (shows practical application)",
+          "communities[].engagement (shows participation)",
+          "MISSING: overall career narrative and background"
+        ]
+      },
+      "currentlySatisfied": false,
+      "gaps": [
+        "No career-narrative.json to tell the overall story",
+        "No profile.json with background/experience summary",
+        "Data exists but not packaged into compelling narrative for external communication"
+      ],
+      "implementation": {
+        "method": "NOT YET IMPLEMENTED - Would require narrative/profile document",
+        "query": "Need: career-narrative.json with background, motivation, preparation evidence",
+        "outputFormat": "Career profile: Background → Why Robotics → Preparation (learning, projects, communities) → Target Roles → Values/Fit"
+      },
+      "priority": "medium"
+    },
+    {
+      "id": "identify-companies-by-criteria",
+      "persona": "reed",
+      "story": "As Reed, I want to filter companies by my fit criteria (domain, mission, location, etc.), so that I focus on the best opportunities",
+      "questions": [
+        "Which SF-based robotics companies have excellent mission fit?",
+        "Which companies work on food/cooking (personal passion)?",
+        "Which companies build physical robots (not just software)?",
+        "Which companies are YC-backed (signal of quality/culture)?",
+        "Which companies have I marked as 'reference' and why?"
+      ],
+      "acceptanceCriteria": [
+        "Can filter by location, fit scores, technical methods, mission",
+        "Can filter by company characteristics (YC batch, team size, etc.)",
+        "Can see reasoning for each company's status",
+        "Can identify similar companies based on criteria"
+      ],
+      "requiredData": {
+        "files": ["companies.json"],
+        "fields": [
+          "companies[].location",
+          "companies[].fit.domain and fit.mission",
+          "companies[].technicalMethods",
+          "companies[].physicalWorkProduct",
+          "companies[].companyDetails.ycBatch",
+          "companies[].jobInteraction.status",
+          "companies[].jobInteraction.notes"
+        ]
+      },
+      "currentlySatisfied": true,
+      "implementation": {
+        "method": "Filter companies.json by criteria",
+        "query": "companies.filter(c => c.location.includes('San Francisco') && c.fit.mission === 'excellent' && c.physicalWorkProduct === true)",
+        "outputFormat": "Filtered company list with key attributes and fit reasoning"
+      },
+      "priority": "high"
+    },
+    {
+      "id": "map-skills-to-companies",
+      "persona": "reed",
+      "story": "As Reed, I want to see which companies use a specific skill I'm learning, so that I can prioritize learning that skill",
+      "questions": [
+        "Which companies need ROS expertise?",
+        "Which companies do perception/computer vision work?",
+        "If I learn Edge AI, which companies does that unlock?",
+        "Which skill has the highest ROI (unlocks most companies)?"
+      ],
+      "acceptanceCriteria": [
+        "Can search by skill and see relevant companies",
+        "Can see how many companies use each skill",
+        "Can prioritize skills by company coverage",
+        "Can see skill overlap between companies"
+      ],
+      "requiredData": {
+        "files": ["companies.json", "skills.json"],
+        "fields": [
+          "companies[].technicalMethods",
+          "skills[].relevanceToCareer.companyUsage",
+          "skills[].relevanceToCareer.relevantToRoles"
+        ]
+      },
+      "currentlySatisfied": true,
+      "implementation": {
+        "method": "Cross-reference skills.json and companies.json by technical methods",
+        "query": "skillName = 'computer vision'; relevantCompanies = companies.filter(c => c.technicalMethods.includes(skillName)); skill = skills.find(s => s.name.includes('Computer Vision'))",
+        "outputFormat": "Skill → Companies using skill → Roles requiring skill → Learning resources (from skill.resources[])"
+      },
+      "priority": "high"
+    },
+    {
+      "id": "track-community-to-company-connections",
+      "persona": "reed",
+      "story": "As Reed, I want to see which communities connect to which companies, so that I can network strategically",
+      "questions": [
+        "Which communities connect to which companies?",
+        "If I want to meet people from Company X, which communities should I join?",
+        "Which Noisebridge members work at robotics companies?",
+        "Which conference will have the most relevant people?"
+      ],
+      "acceptanceCriteria": [
+        "Can see company-community relationships",
+        "Can identify which community members work where",
+        "Can prioritize communities by company alignment",
+        "Can see which events attract target company employees"
+      ],
+      "requiredData": {
+        "files": ["communities-and-ecosystems.json", "networking-opportunities.json", "companies.json", "MISSING: contacts.json"],
+        "fields": [
+          "communities[].relevanceToCareer",
+          "networking-opportunities[].relevanceToCareer.potentialConnections",
+          "MISSING: community members and their companies",
+          "MISSING: contact source tracking"
+        ]
+      },
+      "currentlySatisfied": false,
+      "gaps": [
+        "No contacts.json to track people and their companies",
+        "No explicit company-community linking",
+        "Community connections implied but not structured"
+      ],
+      "implementation": {
+        "method": "NOT YET IMPLEMENTED - Would require contacts.json with company affiliations",
+        "query": "Need: contacts linked to companies and communities",
+        "outputFormat": "Community/Event → Companies represented → People to meet → Follow-up actions"
+      },
+      "priority": "low"
+    },
+    {
+      "id": "understand-past-decision-reasoning",
+      "persona": "future-reed",
+      "story": "As Future Reed, I want to understand why I declined certain companies or opportunities, so that I can learn from my decision-making",
+      "questions": [
+        "Why did I decline Palantir?",
+        "What was my reasoning for not applying to companies in Europe?",
+        "Why did I prioritize Chef Robotics over other robotics companies?",
+        "What did I learn from the Adobe rejection?"
+      ],
+      "acceptanceCriteria": [
+        "Can see reasoning for all decisions (apply/decline/deprioritize)",
+        "Can understand values and criteria that drove decisions",
+        "Can see outcomes of decisions over time",
+        "Can identify patterns in what worked/didn't work"
+      ],
+      "requiredData": {
+        "files": ["companies.json"],
+        "fields": [
+          "companies[].jobInteraction.status",
+          "companies[].jobInteraction.notes",
+          "companies[].fit.domain and fit.mission",
+          "companies[].personalResonance"
+        ]
+      },
+      "currentlySatisfied": true,
+      "implementation": {
+        "method": "Review companies.json notes and fit scores",
+        "query": "companies.filter(c => c.jobInteraction.status === 'declined').map(c => ({name: c.name, reason: c.jobInteraction.notes, fit: c.fit}))",
+        "outputFormat": "Decision log: Company → Decision → Reasoning → Fit scores → Outcome (if applicable)"
+      },
+      "priority": "low",
+      "enhancements": [
+        "Add decision timestamp to track evolution of criteria",
+        "Add reflection field for post-decision learning"
+      ]
+    }
+  ],
+  "missingDataStructures": [
+    {
+      "filename": "contacts.json",
+      "description": "Track relationships, referrals, and networking connections",
+      "requiredFor": ["track-community-to-company-connections", "evaluate-network-investment-roi"],
+      "priority": "medium",
+      "suggestedStructure": {
+        "contacts": [
+          {
+            "id": "rachel-mcmaster",
+            "name": "Rachel",
+            "company": "Adobe",
+            "previousCompany": "McMaster-Carr",
+            "relationship": "former_colleague",
+            "friendLevel": 1,
+            "source": "mcmaster-carr",
+            "interactions": [
+              {
+                "date": "2025-01-10",
+                "type": "referral_request",
+                "context": "Adobe Software Engineer role"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "filename": "career-narrative.json",
+      "description": "Overall career story, background, and transition narrative",
+      "requiredFor": ["explain-career-strategy-to-referrer"],
+      "priority": "low",
+      "suggestedStructure": {
+        "background": "Software engineer and engineering manager with 5+ years experience...",
+        "motivation": "Why transitioning to robotics...",
+        "preparation": "What I've done to prepare...",
+        "targetRoles": ["Perception Engineer", "Robotics Software Engineer"],
+        "values": ["Physical work product", "Environmental mission", "Technical depth"]
+      }
+    }
+  ],
+  "metadata": {
+    "purpose": "Document what questions the career planning data must answer, for whom, and how well current data satisfies those needs",
+    "usage": "Use this file to:\n1. Validate data structure design (does it answer key questions?)\n2. Identify missing data or capabilities\n3. Prioritize enhancements to existing data\n4. Communicate strategy to others (mentors, referrers)\n5. Guide future data collection",
+    "storyFields": {
+      "persona": "Who needs this capability (from personas object)",
+      "story": "User story in format: As [persona], I want [goal], so that [reason]",
+      "questions": "Specific questions this story enables answering",
+      "acceptanceCriteria": "What defines 'done' for this capability",
+      "requiredData": "Which files and fields are needed",
+      "currentlySatisfied": "Can the current data structures answer this? (boolean)",
+      "gaps": "What's missing to fully satisfy this story",
+      "implementation": "How to actually query/use the data to answer the questions",
+      "priority": "critical | high | medium | low"
+    }
+  }
+}

@@ -1,0 +1,627 @@
+{
+  "$schema": "userstories-schema-v1",
+  "description": "User stories and queries that the business acquisition data structures must support. Documents what questions should be answerable and by whom.",
+  "lastUpdated": "2025-10-23",
+  "personas": {
+    "reed": {
+      "name": "Reed (CEO/Operator)",
+      "description": "The primary operator who will run the acquired business, responsible for day-to-day deal evaluation and operations planning",
+      "primaryNeeds": [
+        "Evaluate business opportunities efficiently",
+        "Identify profit improvement opportunities using tech/software skills",
+        "Track deal pipeline and status",
+        "Assess operational fit and capability gaps",
+        "Make strategic decisions about which deals to pursue"
+      ]
+    },
+    "david": {
+      "name": "David (Chairman/Investor)",
+      "description": "The financial partner and advisor providing capital and business experience",
+      "primaryNeeds": [
+        "Understand financial health of potential acquisitions",
+        "Monitor deal pipeline and progress toward goals",
+        "Assess risk and valuation of opportunities",
+        "Provide strategic oversight without daily involvement",
+        "Ensure sound investment decisions"
+      ]
+    },
+    "both": {
+      "name": "Reed & David Partnership",
+      "description": "Shared needs when evaluating deals together",
+      "primaryNeeds": [
+        "Compare opportunities side-by-side",
+        "Track progress toward acquisition goals (60 solicitations, 20 conversations, 5 strong opportunities)",
+        "Maintain shared understanding of evaluation criteria",
+        "Document decisions and reasoning for future reference"
+      ]
+    },
+    "future-reed": {
+      "name": "Future Reed",
+      "description": "Reed 1-3 years from now, reviewing past decisions and learning from the acquisition process",
+      "primaryNeeds": [
+        "Understand reasoning behind deal decisions (passed vs pursued)",
+        "Learn from successful and unsuccessful evaluations",
+        "See evolution of evaluation criteria over time",
+        "Assess which profit opportunities actually materialized"
+      ]
+    },
+    "advisor": {
+      "name": "External Advisor/Broker",
+      "description": "Business brokers, M&A advisors, or mentors helping with the acquisition process",
+      "primaryNeeds": [
+        "Understand Reed & David's acquisition criteria",
+        "See what types of businesses they're targeting",
+        "Understand their skill-based value-add approach",
+        "Know their budget and timeline constraints"
+      ]
+    }
+  },
+  "stories": [
+    {
+      "id": "filter-potential-deals",
+      "persona": "reed",
+      "story": "As Reed, I want to see all businesses marked as 'potential' that are worth pursuing, so that I can focus my time on the most promising opportunities",
+      "questions": [
+        "Which businesses are currently marked as potential?",
+        "What's the total asking price of potential deals?",
+        "Which potential deals have the best margins?",
+        "Which potential deals have the best earnings multiples (lower is better)?"
+      ],
+      "acceptanceCriteria": [
+        "Can filter companies by status = 'potential'",
+        "Can sort by margin, earnings multiple, or score",
+        "Can see key financial metrics at a glance",
+        "Can see why each was marked as potential (profit opportunities)"
+      ],
+      "requiredData": {
+        "files": ["companies.json", "companies-with-metrics.json"],
+        "fields": [
+          "companies[].status.type",
+          "companies[].askingPrice",
+          "companies[].mostRecentEarnings",
+          "companies[].marginCalculated",
+          "companies[].earningsMultipleCalculated",
+          "companies[].profitOpportunities"
+        ]
+      },
+      "currentlySatisfied": true,
+      "implementation": {
+        "method": "Filter companies-with-metrics.json by status.type = 'potential'",
+        "query": "companies.filter(c => c.status.type === 'potential').sort((a, b) => a.earningsMultipleCalculated - b.earningsMultipleCalculated)",
+        "outputFormat": "Table with: Company Name → Asking Price → Most Recent Earnings → Margin % → Earnings Multiple → Profit Opportunities → Score"
+      },
+      "priority": "critical"
+    },
+    {
+      "id": "identify-profit-opportunities",
+      "persona": "reed",
+      "story": "As Reed, I want to see which businesses have profit opportunities that match my skills (SEO, marketing, tech improvements), so that I can add value and justify the acquisition",
+      "questions": [
+        "Which businesses have SEO/web improvement opportunities?",
+        "Which businesses could benefit from operational automation?",
+        "Which businesses have multiple profit levers I could pull?",
+        "Are there businesses where I can't identify clear profit opportunities?"
+      ],
+      "acceptanceCriteria": [
+        "Can filter by specific profit opportunity types (web_seo, shopify_seo, operational_efficiency, etc.)",
+        "Can see which businesses have empty profitOpportunities arrays (need more analysis)",
+        "Can identify businesses with multiple profit levers",
+        "Can map my skills to specific profit opportunities"
+      ],
+      "requiredData": {
+        "files": ["companies.json", "profit-opportunity-types.json"],
+        "fields": [
+          "companies[].profitOpportunities",
+          "companies[].profitLever (legacy field)",
+          "profit-opportunity-types.values"
+        ]
+      },
+      "currentlySatisfied": true,
+      "gaps": [
+        "Most profitOpportunities arrays are currently empty (need to populate)",
+        "No structured description of HOW each opportunity would be executed",
+        "No effort estimation for implementing each opportunity"
+      ],
+      "implementation": {
+        "method": "Filter companies by profitOpportunities array content",
+        "query": "companies.filter(c => c.profitOpportunities.includes('web_seo') || c.profitOpportunities.includes('shopify_seo'))",
+        "outputFormat": "List of companies with: Name → Profit Opportunities → Estimated Impact → Implementation Complexity"
+      },
+      "priority": "critical",
+      "enhancements": [
+        "Add profitOpportunityDetails object with execution plans for each opportunity",
+        "Add estimatedImpact field (low/medium/high revenue increase)",
+        "Add implementationComplexity field (easy/medium/hard)"
+      ]
+    },
+    {
+      "id": "assess-financial-viability",
+      "persona": "david",
+      "story": "As David, I want to assess the financial health and valuation of potential acquisitions, so that I can ensure we're making sound investments",
+      "questions": [
+        "What are the earnings multiples for each potential deal?",
+        "Are any businesses priced above market multiples (e.g., >4x for small businesses)?",
+        "Which businesses have increasing revenue/earnings trends?",
+        "What's the margin profile of each business?",
+        "Do any businesses have insufficient earnings to support the deal?"
+      ],
+      "acceptanceCriteria": [
+        "Can see earnings multiples for all businesses",
+        "Can identify overpriced deals (high multiples)",
+        "Can see revenue/earnings trends (2023 vs 2024/TTM)",
+        "Can see margin percentages",
+        "Can see sufficientEarningsCheck flag"
+      ],
+      "requiredData": {
+        "files": ["companies-with-metrics.json"],
+        "fields": [
+          "companies[].earningsMultipleCalculated",
+          "companies[].marginCalculated",
+          "companies[].revenue2023",
+          "companies[].revenue2024OrTTM",
+          "companies[].earnings2023",
+          "companies[].earnings2024OrTTM",
+          "companies[].sufficientEarningsCheck"
+        ]
+      },
+      "currentlySatisfied": true,
+      "implementation": {
+        "method": "Analyze companies-with-metrics.json financial fields",
+        "query": "companies.map(c => ({ name: c.companyTitle, multiple: c.earningsMultipleCalculated, margin: c.marginCalculated, trend: calculateTrend(c), sufficientEarnings: c.sufficientEarningsCheck }))",
+        "outputFormat": "Financial dashboard: Company → Earnings Multiple → Margin % → Revenue Trend → Earnings Trend → Sufficient Earnings Flag → Valuation Assessment"
+      },
+      "priority": "critical"
+    },
+    {
+      "id": "track-pipeline-progress",
+      "persona": "both",
+      "story": "As the Reed & David partnership, we want to track progress toward our acquisition goals (60 solicitations, 20 conversations, 5 strong opportunities, 1 acquisition), so that we can pace our efforts appropriately",
+      "questions": [
+        "How many businesses have we evaluated (total solicitations)?",
+        "How many initial conversations have we had with sellers?",
+        "How many strong opportunities (potential) have we identified?",
+        "Have we purchased any businesses yet?",
+        "Are we on track to meet our Fall 2025/Winter-Spring 2026 goals?"
+      ],
+      "acceptanceCriteria": [
+        "Can count total companies tracked",
+        "Can count by status (potential, declined, unavailable, acquired, under_review)",
+        "Can see progress toward numeric goals (60, 20, 5, 1)",
+        "Can see timeline of when companies were added (if date field exists)",
+        "Can identify gaps in the pipeline"
+      ],
+      "requiredData": {
+        "files": ["companies.json"],
+        "fields": [
+          "companies[].status.type",
+          "companies[].companyTitle",
+          "MISSING: dateAdded or dateEvaluated"
+        ]
+      },
+      "currentlySatisfied": true,
+      "gaps": [
+        "No timestamp for when companies were added (can't track velocity)",
+        "No field for 'initial conversation had' (can't distinguish solicitation from conversation)",
+        "No clear distinction between 'potential' and 'strong opportunity'"
+      ],
+      "implementation": {
+        "method": "Count companies by status",
+        "query": "totalSolicitations = companies.length; conversations = companies.filter(c => c.conversationHad).length; strongOpportunities = companies.filter(c => c.status.type === 'potential').length; acquired = companies.filter(c => c.status.type === 'acquired').length",
+        "outputFormat": "Progress dashboard: Total Solicitations (current/60 goal) → Conversations (current/20 goal) → Strong Opportunities (current/5 goal) → Acquisitions (current/1 goal)"
+      },
+      "priority": "high",
+      "enhancements": [
+        "Add dateAdded field to track velocity over time",
+        "Add conversationHad boolean or conversationDate field",
+        "Add priority/strength field to distinguish 'potential' from 'strong opportunity'"
+      ]
+    },
+    {
+      "id": "compare-opportunities-side-by-side",
+      "persona": "both",
+      "story": "As the partnership, we want to compare 2-3 opportunities side-by-side to make informed decisions during discussions",
+      "questions": [
+        "How does Business A compare to Business B on key metrics?",
+        "Which opportunity has better margins?",
+        "Which has more profit improvement opportunities?",
+        "Which has better data recency?",
+        "Which is a better strategic fit?"
+      ],
+      "acceptanceCriteria": [
+        "Can select multiple companies for comparison",
+        "Can see all key metrics in a comparison table",
+        "Can see visual differences (charts, color coding)",
+        "Can export comparison for discussion"
+      ],
+      "requiredData": {
+        "files": ["companies-with-metrics.json"],
+        "fields": [
+          "All financial fields",
+          "companies[].profitOpportunities",
+          "companies[].score",
+          "companies[].dataRecency"
+        ]
+      },
+      "currentlySatisfied": false,
+      "gaps": [
+        "No comparison view or tool exists yet",
+        "Would require web UI or script to generate comparison"
+      ],
+      "implementation": {
+        "method": "NOT YET IMPLEMENTED - Would require comparison UI",
+        "query": "selectedCompanies = ['company-id-1', 'company-id-2']; comparison = companies.filter(c => selectedCompanies.includes(c.id))",
+        "outputFormat": "Side-by-side comparison table: Metric → Company A → Company B → Difference/Winner"
+      },
+      "priority": "high"
+    },
+    {
+      "id": "understand-declined-reasons",
+      "persona": "future-reed",
+      "story": "As Future Reed, I want to understand why we declined specific businesses, so that I can learn from our evaluation criteria and decision-making",
+      "questions": [
+        "Why did we decline Business X?",
+        "What were the common reasons for declining deals?",
+        "Did we decline any deals we should have pursued?",
+        "What patterns emerge in our decision-making?"
+      ],
+      "acceptanceCriteria": [
+        "Can see all declined businesses with reasons",
+        "Can group by decline reason",
+        "Can see if any patterns exist (e.g., always decline cosmetics)",
+        "Can reflect on decision quality over time"
+      ],
+      "requiredData": {
+        "files": ["companies.json"],
+        "fields": [
+          "companies[].status.type (declined)",
+          "companies[].status.reason"
+        ]
+      },
+      "currentlySatisfied": true,
+      "implementation": {
+        "method": "Filter companies by status.type = 'declined', group by status.reason",
+        "query": "declinedCompanies = companies.filter(c => c.status.type === 'declined'); groupedReasons = groupBy(declinedCompanies, 'status.reason')",
+        "outputFormat": "Declined businesses table: Company → Reason → Score → Asking Price → Key Metrics | Summary: Top decline reasons with counts"
+      },
+      "priority": "medium"
+    },
+    {
+      "id": "identify-data-quality-issues",
+      "persona": "reed",
+      "story": "As Reed, I want to identify businesses with missing or incomplete data, so that I can fill in gaps before making decisions",
+      "questions": [
+        "Which businesses are missing location data?",
+        "Which businesses are missing employee counts?",
+        "Which businesses have empty profitOpportunities arrays?",
+        "Which businesses are using old data (2023 vs TTM)?",
+        "Which businesses need more research?"
+      ],
+      "acceptanceCriteria": [
+        "Can see data completeness for each business",
+        "Can filter by missing fields",
+        "Can prioritize data collection efforts",
+        "Can see data recency scores"
+      ],
+      "requiredData": {
+        "files": ["companies-with-metrics.json"],
+        "fields": [
+          "companies[].city",
+          "companies[].state",
+          "companies[].employees",
+          "companies[].profitOpportunities",
+          "companies[].dataRecency",
+          "companies[].dataYear"
+        ]
+      },
+      "currentlySatisfied": true,
+      "gaps": [
+        "No automated data quality dashboard",
+        "Validation script shows warnings but not in queryable format",
+        "No prioritization of which missing data is most critical"
+      ],
+      "implementation": {
+        "method": "Check for null/empty fields in companies-with-metrics.json",
+        "query": "companies.map(c => ({ name: c.companyTitle, missingLocation: !c.city || !c.state, missingEmployees: !c.employees, emptyProfitOps: c.profitOpportunities.length === 0, dataRecency: c.dataRecency }))",
+        "outputFormat": "Data quality report: Company → Missing Location → Missing Employees → Empty Profit Opportunities → Data Recency Score → Priority (high/medium/low)"
+      },
+      "priority": "medium"
+    },
+    {
+      "id": "find-businesses-by-location",
+      "persona": "reed",
+      "story": "As Reed, I want to find businesses by location (city/state), so that I can prioritize local or regional opportunities",
+      "questions": [
+        "Which businesses are in California?",
+        "Which businesses are local to me (easy to visit)?",
+        "Are there any regional clusters of opportunities?",
+        "Which states have the most opportunities?"
+      ],
+      "acceptanceCriteria": [
+        "Can filter by state or city",
+        "Can see geographic distribution",
+        "Can identify businesses missing location data",
+        "Can map businesses to proximity/travel time"
+      ],
+      "requiredData": {
+        "files": ["companies.json"],
+        "fields": [
+          "companies[].city",
+          "companies[].state"
+        ]
+      },
+      "currentlySatisfied": true,
+      "gaps": [
+        "Most businesses missing location data (need to populate)",
+        "No proximity/travel time calculation",
+        "No map visualization"
+      ],
+      "implementation": {
+        "method": "Filter companies by state or city",
+        "query": "companies.filter(c => c.state === 'CA' || c.state === 'California')",
+        "outputFormat": "List of businesses with: Name → City → State → Asking Price → Status | Map view with pins (future enhancement)"
+      },
+      "priority": "medium",
+      "enhancements": [
+        "Add proximity calculation (distance from home base)",
+        "Add map visualization",
+        "Normalize state values (CA vs California vs ca)"
+      ]
+    },
+    {
+      "id": "filter-by-price-range",
+      "persona": "both",
+      "story": "As the partnership, we want to filter businesses by asking price range, so that we focus on opportunities within our budget (~$750K target)",
+      "questions": [
+        "Which businesses are priced under $1M?",
+        "Which businesses are in our target range ($500K-$1M)?",
+        "Are there any businesses priced significantly below market value?",
+        "What's the distribution of asking prices?"
+      ],
+      "acceptanceCriteria": [
+        "Can filter by price range (e.g., $500K-$1M)",
+        "Can see price distribution histogram",
+        "Can identify outliers (very cheap or very expensive)",
+        "Can sort by asking price"
+      ],
+      "requiredData": {
+        "files": ["companies.json"],
+        "fields": [
+          "companies[].askingPrice",
+          "companies[].earningsMultipleCalculated (for value assessment)"
+        ]
+      },
+      "currentlySatisfied": true,
+      "implementation": {
+        "method": "Filter companies by askingPrice range",
+        "query": "companies.filter(c => c.askingPrice >= 500000 && c.askingPrice <= 1000000)",
+        "outputFormat": "Filtered list: Company → Asking Price → Earnings → Multiple → Status | Summary: Count by price bracket (<$500K, $500K-$1M, >$1M)"
+      },
+      "priority": "high"
+    },
+    {
+      "id": "assess-data-recency",
+      "persona": "david",
+      "story": "As David, I want to know how recent the financial data is for each business, so that I can assess reliability and request updated information if needed",
+      "questions": [
+        "Which businesses have the most recent data (TTM)?",
+        "Which businesses are using 2023 data (potentially stale)?",
+        "Should we request updated financials before proceeding?",
+        "Which businesses have the best dataRecency scores?"
+      ],
+      "acceptanceCriteria": [
+        "Can see dataYear for each business",
+        "Can see dataRecency score (TTM=10, 2024=7, 2023=4)",
+        "Can filter by data recency",
+        "Can identify businesses needing updated financials"
+      ],
+      "requiredData": {
+        "files": ["companies-with-metrics.json"],
+        "fields": [
+          "companies[].dataYear",
+          "companies[].dataRecency"
+        ]
+      },
+      "currentlySatisfied": true,
+      "implementation": {
+        "method": "Sort/filter companies by dataRecency score",
+        "query": "companies.sort((a, b) => b.dataRecency - a.dataRecency)",
+        "outputFormat": "Table: Company → Data Year → Data Recency Score → Recommendation (proceed / request updated financials)"
+      },
+      "priority": "medium"
+    },
+    {
+      "id": "explain-acquisition-criteria-to-broker",
+      "persona": "advisor",
+      "story": "As a business broker or advisor, I want to understand Reed & David's acquisition criteria, so that I can bring them relevant opportunities",
+      "questions": [
+        "What types of businesses are they looking for?",
+        "What's their budget range?",
+        "What skills/expertise do they bring to add value?",
+        "What industries or business models do they avoid?",
+        "What's their timeline?"
+      ],
+      "acceptanceCriteria": [
+        "Can see target business profiles",
+        "Can see budget constraints",
+        "Can see skill-based value-add approach",
+        "Can see examples of 'good fit' vs 'bad fit' businesses",
+        "Can see timeline and urgency"
+      ],
+      "requiredData": {
+        "files": ["Documentation/business-acquisition-framework.md", "Documentation/opportunities-target-and-avoid.md", "companies.json"],
+        "fields": [
+          "Target criteria from documentation",
+          "Avoid criteria from documentation",
+          "Examples from companies[].status.type = 'potential' (good fits)",
+          "Examples from companies[].status.type = 'declined' with reasons (bad fits)"
+        ]
+      },
+      "currentlySatisfied": true,
+      "gaps": [
+        "Criteria is in documentation but not structured/queryable data",
+        "No 'acquisition-profile.json' to consolidate criteria in one place",
+        "Examples of good/bad fits exist but not explicitly tagged"
+      ],
+      "implementation": {
+        "method": "Extract criteria from documentation and example companies",
+        "query": "targetCriteria = extract from opportunities-target-and-avoid.md; goodFitExamples = companies.filter(c => c.status.type === 'potential'); badFitExamples = companies.filter(c => c.status.type === 'declined')",
+        "outputFormat": "Acquisition profile: Budget ($500K-$1M) → Target industries (niche software, content sites, automation tools) → Value-add approach (SEO, tech, marketing) → Avoid (cosmetics, highly technical, outside US) → Timeline (3 years ideal, 10 max) → Examples"
+      },
+      "priority": "low",
+      "enhancements": [
+        "Create acquisition-profile.json to consolidate criteria",
+        "Add 'fitExample' tag to companies to highlight good/bad fits"
+      ]
+    },
+    {
+      "id": "calculate-payback-period",
+      "persona": "both",
+      "story": "As the partnership, we want to understand the payback period for each acquisition, so that we can assess return on investment and alignment with our 3-10 year timeline",
+      "questions": [
+        "How long will it take to pay back the acquisition cost from earnings?",
+        "Which businesses have the shortest payback periods?",
+        "Can we achieve payback within our 3-year ideal timeline?",
+        "What earnings growth would we need to hit our timeline goals?"
+      ],
+      "acceptanceCriteria": [
+        "Can calculate payback period (askingPrice / mostRecentEarnings)",
+        "Can see payback period for all businesses",
+        "Can filter by payback period range",
+        "Can model scenarios with earnings growth assumptions"
+      ],
+      "requiredData": {
+        "files": ["companies-with-metrics.json"],
+        "fields": [
+          "companies[].askingPrice",
+          "companies[].mostRecentEarnings",
+          "companies[].fee (broker fee to add to total cost)"
+        ]
+      },
+      "currentlySatisfied": true,
+      "gaps": [
+        "No paybackPeriod calculated field (but can be derived)",
+        "No scenario modeling for earnings growth",
+        "No adjustment for broker fees in payback calculation"
+      ],
+      "implementation": {
+        "method": "Calculate paybackPeriod = (askingPrice + fee) / mostRecentEarnings",
+        "query": "companies.map(c => ({ ...c, paybackPeriod: (c.askingPrice + (c.fee || 0)) / c.mostRecentEarnings }))",
+        "outputFormat": "Table: Company → Asking Price → Earnings → Payback Period (years) → Fit with Timeline (good <3 yrs, acceptable 3-7 yrs, long >7 yrs)"
+      },
+      "priority": "high",
+      "enhancements": [
+        "Add paybackPeriod to calculated metrics",
+        "Add scenario modeling (e.g., 20% earnings growth → new payback period)",
+        "Include broker fee in total acquisition cost"
+      ]
+    }
+  ],
+  "missingDataStructures": [
+    {
+      "filename": "acquisition-profile.json",
+      "description": "Consolidated acquisition criteria, budget, timeline, and value-add approach for external communication",
+      "requiredFor": ["explain-acquisition-criteria-to-broker"],
+      "priority": "low",
+      "suggestedStructure": {
+        "partnership": {
+          "roles": {
+            "reed": "CEO/Operator - Software/tech expertise, will run business",
+            "david": "Chairman/Investor - Capital provider, strategic advisor"
+          },
+          "budget": {
+            "target": 750000,
+            "min": 500000,
+            "max": 1000000
+          },
+          "timeline": {
+            "ideal": "3 years",
+            "maximum": "10 years",
+            "acquisitionGoal": "Fall 2025 - Spring 2026"
+          }
+        },
+        "targetCriteria": {
+          "industries": ["niche software tools", "platform automation", "content sites", "marketplace/dropshipping tools"],
+          "businessModels": ["SaaS", "marketplaces", "content/affiliate", "e-commerce tools"],
+          "characteristics": ["strong moat", "clear profit levers", "minimal external expertise needed"],
+          "valueAdd": ["SEO/web optimization", "marketing improvements", "operational automation", "product/tech improvements"]
+        },
+        "avoidCriteria": {
+          "industries": ["cosmetics", "healthcare", "highly regulated"],
+          "characteristics": ["outside US", "highly technical niches Reed doesn't understand", "weak moats", "declining markets"]
+        }
+      }
+    },
+    {
+      "filename": "conversations.json",
+      "description": "Track conversations with sellers, brokers, and advisors",
+      "requiredFor": ["track-pipeline-progress"],
+      "priority": "medium",
+      "suggestedStructure": {
+        "conversations": [
+          {
+            "id": "conversation-outdoor-school-2025-09-15",
+            "companyId": "outdoor-school-xyz",
+            "date": "2025-09-15",
+            "participants": ["Reed", "Seller Name"],
+            "type": "initial_call",
+            "duration": "45 minutes",
+            "notes": "Discussed revenue sources, asked about profit opportunities, learned about operational challenges",
+            "outcome": "Requested financial statements",
+            "nextSteps": [
+              {
+                "action": "Review financial statements",
+                "owner": "Reed",
+                "dueDate": "2025-09-22"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "filename": "due-diligence-checklist.json",
+      "description": "Standardized checklist for evaluating each opportunity during due diligence",
+      "requiredFor": ["Future enhancement - systematic evaluation"],
+      "priority": "low",
+      "suggestedStructure": {
+        "categories": [
+          {
+            "category": "Financial",
+            "items": [
+              "Review 3 years of financial statements",
+              "Verify revenue sources",
+              "Verify expense categories",
+              "Calculate true SDE/EBITDA",
+              "Identify one-time vs recurring costs"
+            ]
+          },
+          {
+            "category": "Operations",
+            "items": [
+              "Document key processes",
+              "Identify dependencies on owner",
+              "Assess technology stack",
+              "Review vendor relationships"
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "metadata": {
+    "purpose": "Document what questions the business acquisition data must answer, for whom, and how well current data satisfies those needs",
+    "usage": "Use this file to:\n1. Validate data structure design (does it answer key questions?)\n2. Identify missing data or capabilities\n3. Prioritize enhancements to existing data\n4. Guide web UI development (what views/features to build)\n5. Communicate acquisition criteria to brokers and advisors\n6. Track progress toward acquisition goals",
+    "storyFields": {
+      "persona": "Who needs this capability (from personas object)",
+      "story": "User story in format: As [persona], I want [goal], so that [reason]",
+      "questions": "Specific questions this story enables answering",
+      "acceptanceCriteria": "What defines 'done' for this capability",
+      "requiredData": "Which files and fields are needed",
+      "currentlySatisfied": "Can the current data structures answer this? (boolean)",
+      "gaps": "What's missing to fully satisfy this story",
+      "implementation": "How to actually query/use the data to answer the questions",
+      "priority": "critical | high | medium | low",
+      "enhancements": "Optional improvements to better satisfy the story"
+    }
+  }
+}

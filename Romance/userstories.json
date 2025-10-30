@@ -1,0 +1,581 @@
+{
+  "$schema": "userstories-schema-v1",
+  "description": "User stories and queries that the romance tracking data structures must support. Documents what questions should be answerable and by whom.",
+  "lastUpdated": "2025-10-23",
+  "personas": {
+    "reed": {
+      "name": "Reed (Primary User)",
+      "description": "The person tracking and reflecting on their romantic relationship",
+      "primaryNeeds": [
+        "Process feelings and articulate emotions through reflection",
+        "Track relationship milestones and progress",
+        "Remember important dates and moments",
+        "Understand patterns in relationship dynamics",
+        "Plan thoughtful dates and gestures"
+      ]
+    },
+    "partner": {
+      "name": "Partner",
+      "description": "Reed's romantic partner in the relationship",
+      "primaryNeeds": [
+        "Feel remembered and valued",
+        "Share experiences and create memories",
+        "Understand relationship goals and trajectory",
+        "Communicate needs and preferences"
+      ]
+    },
+    "future-reed": {
+      "name": "Future Reed",
+      "description": "Reed months or years from now, reflecting on the relationship",
+      "primaryNeeds": [
+        "Understand how the relationship evolved over time",
+        "Remember key moments and turning points",
+        "Learn from relationship patterns and decisions",
+        "Preserve memories and appreciate the journey"
+      ]
+    },
+    "close-friend": {
+      "name": "Close Friend/Confidant",
+      "description": "Trusted friend supporting Reed through relationship",
+      "primaryNeeds": [
+        "Understand relationship context to give advice",
+        "Track relationship health and red/green flags",
+        "Provide perspective on patterns",
+        "Celebrate wins and support through challenges"
+      ]
+    }
+  },
+  "stories": [
+    {
+      "id": "track-relationship-milestones",
+      "persona": "reed",
+      "story": "As Reed, I want to track key milestones in my relationship, so that I can remember and celebrate important moments",
+      "questions": [
+        "When did we first meet?",
+        "What was our first date?",
+        "When did we become official?",
+        "What are our relationship anniversaries?",
+        "What milestones have we reached together?"
+      ],
+      "acceptanceCriteria": [
+        "Can see timeline of major relationship events",
+        "Can filter milestones by type (first date, anniversary, etc.)",
+        "Can see dates and descriptions of each milestone",
+        "Can identify upcoming anniversaries to celebrate"
+      ],
+      "requiredData": {
+        "files": ["milestones.json"],
+        "fields": [
+          "milestones[].date",
+          "milestones[].type",
+          "milestones[].description",
+          "milestones[].significance"
+        ]
+      },
+      "currentlySatisfied": false,
+      "gaps": [
+        "No milestones.json file yet",
+        "Need to define milestone types"
+      ],
+      "implementation": {
+        "method": "Create and query milestones.json chronologically",
+        "query": "milestones.sort((a, b) => new Date(a.date) - new Date(b.date))",
+        "outputFormat": "Chronological timeline of milestones with dates, types, and descriptions"
+      },
+      "priority": "high"
+    },
+    {
+      "id": "process-feelings-and-thoughts",
+      "persona": "reed",
+      "story": "As Reed, I want to process my feelings and thoughts through diary entries, so that I can articulate emotions I already feel but don't yet know how to express",
+      "questions": [
+        "What am I feeling right now about the relationship?",
+        "How can I articulate this emotion or thought?",
+        "What patterns do I notice in my feelings over time?",
+        "What was I feeling during specific moments?",
+        "How have my feelings evolved?"
+      ],
+      "acceptanceCriteria": [
+        "Can create free-form diary entries with timestamps",
+        "Can tag entries by emotion or topic",
+        "Can search past entries by keyword or feeling",
+        "Can see progression of thoughts and feelings over time",
+        "Can reference entries when trying to communicate with partner"
+      ],
+      "requiredData": {
+        "files": ["diary.json"],
+        "fields": [
+          "diary[].date",
+          "diary[].entry (free text)",
+          "diary[].emotions[]",
+          "diary[].topics[]",
+          "diary[].relatedTo (milestone, date, memory)"
+        ]
+      },
+      "currentlySatisfied": false,
+      "gaps": [
+        "No diary.json file yet"
+      ],
+      "implementation": {
+        "method": "Create and query diary.json for reflection and emotional processing",
+        "query": "diary.sort(by date); recentEntries = diary.slice(0, 10); entriesByEmotion = diary.filter(d => d.emotions.includes('anxious'))",
+        "outputFormat": "Diary entries with date, text, emotions, topics, and related references"
+      },
+      "priority": "critical"
+    },
+    {
+      "id": "plan-thoughtful-dates",
+      "persona": "reed",
+      "story": "As Reed, I want to track date ideas and past dates, so that I can plan thoughtful and varied experiences",
+      "questions": [
+        "What dates have we been on?",
+        "What date ideas are on the wishlist?",
+        "What types of dates does my partner enjoy most?",
+        "What's a new date idea we haven't tried?",
+        "When was our last date?"
+      ],
+      "acceptanceCriteria": [
+        "Can see history of completed dates",
+        "Can see planned and wishlist date ideas",
+        "Can filter by date type (adventurous, romantic, casual, etc.)",
+        "Can track which dates were most successful",
+        "Can avoid repetition and plan variety"
+      ],
+      "requiredData": {
+        "files": ["dates.json"],
+        "fields": [
+          "dates[].status (completed, planned, wishlist)",
+          "dates[].date",
+          "dates[].type",
+          "dates[].description",
+          "dates[].rating or feedback"
+        ]
+      },
+      "currentlySatisfied": false,
+      "gaps": [
+        "No dates.json file yet"
+      ],
+      "implementation": {
+        "method": "Filter and query dates.json by status and type",
+        "query": "wishlistDates = dates.filter(d => d.status === 'wishlist'); recentDates = dates.filter(d => d.status === 'completed').sort(by date).slice(0, 5)",
+        "outputFormat": "Lists of dates by status, with type, description, and feedback"
+      },
+      "priority": "high"
+    },
+    {
+      "id": "understand-relationship-health",
+      "persona": "close-friend",
+      "story": "As a close friend, I want to understand the overall health and trajectory of Reed's relationship, so that I can provide supportive advice",
+      "questions": [
+        "How is the relationship going overall?",
+        "What are the strengths of this relationship?",
+        "What are current challenges or areas for growth?",
+        "Are there any concerning patterns?",
+        "What are the green flags and red flags?"
+      ],
+      "acceptanceCriteria": [
+        "Can see relationship health indicators",
+        "Can identify patterns over time",
+        "Can see both positive and negative aspects",
+        "Can track how issues are being addressed"
+      ],
+      "requiredData": {
+        "files": ["relationship-health.json", "milestones.json"],
+        "fields": [
+          "relationship-health.strengths[]",
+          "relationship-health.challenges[]",
+          "relationship-health.greenFlags[]",
+          "relationship-health.redFlags[]",
+          "relationship-health.trajectory"
+        ]
+      },
+      "currentlySatisfied": false,
+      "gaps": [
+        "No relationship-health.json file yet",
+        "Need to define health metrics"
+      ],
+      "implementation": {
+        "method": "NOT YET IMPLEMENTED - Would require relationship-health.json",
+        "query": "Need: structured health assessment data",
+        "outputFormat": "Health dashboard: Strengths, Challenges, Green/Red flags, Trajectory assessment"
+      },
+      "priority": "medium"
+    },
+    {
+      "id": "remember-partner-preferences",
+      "persona": "reed",
+      "story": "As Reed, I want to remember my partner's preferences and interests, so that I can be thoughtful and attentive",
+      "questions": [
+        "What are my partner's favorite things?",
+        "What gifts have they mentioned wanting?",
+        "What are their love languages?",
+        "What topics are they passionate about?",
+        "What makes them feel most appreciated?"
+      ],
+      "acceptanceCriteria": [
+        "Can look up preferences by category",
+        "Can see gift ideas and wishlists",
+        "Can understand how partner likes to receive love",
+        "Can reference interests for conversation and planning"
+      ],
+      "requiredData": {
+        "files": ["partner-profile.json"],
+        "fields": [
+          "partner.preferences.favorites{}",
+          "partner.loveLanguages[]",
+          "partner.interests[]",
+          "partner.giftIdeas[]",
+          "partner.importantValues[]"
+        ]
+      },
+      "currentlySatisfied": false,
+      "gaps": [
+        "No partner-profile.json file yet"
+      ],
+      "implementation": {
+        "method": "Query partner-profile.json by category",
+        "query": "partner.preferences.favorites; partner.loveLanguages; partner.giftIdeas",
+        "outputFormat": "Organized lists of preferences, love languages, interests, gift ideas, values"
+      },
+      "priority": "high"
+    },
+    {
+      "id": "track-relationship-evolution",
+      "persona": "future-reed",
+      "story": "As Future Reed, I want to understand how the relationship has evolved over time, so that I can appreciate the journey and learn from it",
+      "questions": [
+        "How has the relationship changed over time?",
+        "What were the major turning points?",
+        "How have we grown together?",
+        "What challenges did we overcome?",
+        "What patterns emerged over time?"
+      ],
+      "acceptanceCriteria": [
+        "Can see timeline of relationship progression",
+        "Can identify phases of the relationship",
+        "Can see how challenges were resolved",
+        "Can track growth and development",
+        "Can understand trajectory over time"
+      ],
+      "requiredData": {
+        "files": ["milestones.json", "relationship-health.json", "reflections.json"],
+        "fields": [
+          "milestones[] (chronological events)",
+          "relationship-health.trajectory",
+          "reflections[].date and reflections[].insights"
+        ]
+      },
+      "currentlySatisfied": false,
+      "gaps": [
+        "No reflections.json file yet",
+        "No time-series health data"
+      ],
+      "implementation": {
+        "method": "NOT YET IMPLEMENTED - Would require reflections and time-series data",
+        "query": "Need: chronological milestones + reflections + health snapshots over time",
+        "outputFormat": "Timeline visualization: Milestones → Reflections → Health trajectory → Patterns identified"
+      },
+      "priority": "medium"
+    },
+    {
+      "id": "plan-gifts-and-surprises",
+      "persona": "reed",
+      "story": "As Reed, I want to track gift ideas and special surprises, so that I can show thoughtfulness and avoid forgetting good ideas",
+      "questions": [
+        "What gift ideas have I thought of?",
+        "What gifts have I already given?",
+        "What did my partner say they wanted?",
+        "When are upcoming occasions for gifts?",
+        "What surprises am I planning?"
+      ],
+      "acceptanceCriteria": [
+        "Can maintain list of gift ideas",
+        "Can track gifts already given",
+        "Can see upcoming occasions (birthday, anniversary, etc.)",
+        "Can mark ideas as planned or completed",
+        "Can reference partner's wishlists"
+      ],
+      "requiredData": {
+        "files": ["gifts.json", "partner-profile.json", "milestones.json"],
+        "fields": [
+          "gifts[].status (idea, planned, given)",
+          "gifts[].occasion",
+          "gifts[].description",
+          "partner.giftIdeas[]",
+          "milestones[] (for upcoming anniversaries/birthdays)"
+        ]
+      },
+      "currentlySatisfied": false,
+      "gaps": [
+        "No gifts.json file yet"
+      ],
+      "implementation": {
+        "method": "Query gifts.json and partner-profile.json",
+        "query": "giftIdeas = gifts.filter(g => g.status === 'idea'); upcomingOccasions = milestones.filter(m => future date within 30 days)",
+        "outputFormat": "Gift tracker: Ideas → Planned → Given, with occasions and partner preferences"
+      },
+      "priority": "medium"
+    },
+    {
+      "id": "track-communication-patterns",
+      "persona": "reed",
+      "story": "As Reed, I want to understand communication patterns and quality, so that I can maintain healthy connection",
+      "questions": [
+        "How often do we communicate?",
+        "What's our quality time frequency?",
+        "Are there any communication issues to address?",
+        "How do we resolve conflicts?",
+        "What are our best communication practices?"
+      ],
+      "acceptanceCriteria": [
+        "Can track communication frequency",
+        "Can note quality vs. quantity of connection",
+        "Can identify communication strengths and weaknesses",
+        "Can track conflict resolution patterns"
+      ],
+      "requiredData": {
+        "files": ["communication.json", "relationship-health.json"],
+        "fields": [
+          "communication.frequency",
+          "communication.qualityTime[]",
+          "communication.strengths[]",
+          "communication.challenges[]",
+          "relationship-health.conflictResolution"
+        ]
+      },
+      "currentlySatisfied": false,
+      "gaps": [
+        "No communication.json file yet",
+        "No structured communication tracking"
+      ],
+      "implementation": {
+        "method": "NOT YET IMPLEMENTED - Would require communication.json",
+        "query": "Need: communication metrics and patterns",
+        "outputFormat": "Communication dashboard: Frequency → Quality time → Strengths → Challenges → Conflict resolution patterns"
+      },
+      "priority": "low"
+    },
+    {
+      "id": "preserve-special-memories",
+      "persona": "future-reed",
+      "story": "As Future Reed, I want to preserve special memories and moments, so that I can cherish them years later",
+      "questions": [
+        "What are our most special memories together?",
+        "What funny or meaningful things happened?",
+        "What did we say to each other in key moments?",
+        "What photos or mementos capture important times?",
+        "What inside jokes or shared experiences do we have?"
+      ],
+      "acceptanceCriteria": [
+        "Can record and find special memories by date or type",
+        "Can attach notes, photos, or quotes to memories",
+        "Can search memories by keyword or theme",
+        "Can create a memory timeline"
+      ],
+      "requiredData": {
+        "files": ["memories.json"],
+        "fields": [
+          "memories[].date",
+          "memories[].description",
+          "memories[].type",
+          "memories[].photos[]",
+          "memories[].quotes[]",
+          "memories[].significance"
+        ]
+      },
+      "currentlySatisfied": false,
+      "gaps": [
+        "No memories.json file yet"
+      ],
+      "implementation": {
+        "method": "Create and query memories.json",
+        "query": "memories.sort(by date); specialMemories = memories.filter(m => m.significance === 'high')",
+        "outputFormat": "Memory collection: Date → Description → Type → Photos → Quotes → Significance"
+      },
+      "priority": "medium"
+    }
+  ],
+  "missingDataStructures": [
+    {
+      "filename": "diary.json",
+      "description": "Free-form diary entries for processing feelings and thoughts about the relationship",
+      "requiredFor": ["process-feelings-and-thoughts", "track-relationship-evolution"],
+      "priority": "critical",
+      "suggestedStructure": {
+        "entries": [
+          {
+            "id": "entry-001",
+            "date": "2025-10-23T14:30:00Z",
+            "entry": "Today I realized... [free-form text for processing emotions and thoughts]",
+            "emotions": ["hopeful", "nervous", "excited"],
+            "topics": ["communication", "future plans"],
+            "relatedTo": {
+              "type": "milestone",
+              "id": "first-meeting"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "filename": "milestones.json",
+      "description": "Track key relationship milestones and anniversaries",
+      "requiredFor": ["track-relationship-milestones", "track-relationship-evolution", "plan-gifts-and-surprises"],
+      "priority": "high",
+      "suggestedStructure": {
+        "milestones": [
+          {
+            "id": "first-meeting",
+            "date": "2025-01-15",
+            "type": "first_meeting",
+            "description": "Met at coffee shop",
+            "significance": "Beginning of relationship",
+            "details": "..."
+          }
+        ]
+      }
+    },
+    {
+      "filename": "dates.json",
+      "description": "Track past dates and plan future ones",
+      "requiredFor": ["plan-thoughtful-dates"],
+      "priority": "high",
+      "suggestedStructure": {
+        "dates": [
+          {
+            "id": "date-001",
+            "status": "completed",
+            "date": "2025-02-14",
+            "type": "romantic",
+            "description": "Dinner at Italian restaurant",
+            "rating": 5,
+            "notes": "Great conversation, loved the ambiance"
+          }
+        ]
+      }
+    },
+    {
+      "filename": "partner-profile.json",
+      "description": "Profile of partner's preferences, interests, and characteristics",
+      "requiredFor": ["remember-partner-preferences", "plan-gifts-and-surprises"],
+      "priority": "high",
+      "suggestedStructure": {
+        "name": "Partner Name",
+        "loveLanguages": ["quality time", "words of affirmation"],
+        "preferences": {
+          "favorites": {
+            "food": "...",
+            "music": "...",
+            "movies": "..."
+          }
+        },
+        "interests": ["hiking", "photography"],
+        "giftIdeas": ["book about photography", "hiking gear"],
+        "importantValues": ["honesty", "adventure", "family"]
+      }
+    },
+    {
+      "filename": "relationship-health.json",
+      "description": "Track relationship health indicators and trajectory",
+      "requiredFor": ["understand-relationship-health", "track-relationship-evolution"],
+      "priority": "medium",
+      "suggestedStructure": {
+        "strengths": ["great communication", "shared values", "mutual respect"],
+        "challenges": ["long distance", "busy schedules"],
+        "greenFlags": ["actively listens", "respects boundaries"],
+        "redFlags": [],
+        "trajectory": "growing stronger",
+        "conflictResolution": "healthy and constructive"
+      }
+    },
+    {
+      "filename": "gifts.json",
+      "description": "Track gift ideas, plans, and history",
+      "requiredFor": ["plan-gifts-and-surprises"],
+      "priority": "medium",
+      "suggestedStructure": {
+        "gifts": [
+          {
+            "id": "gift-001",
+            "status": "idea",
+            "description": "Custom photo album",
+            "occasion": "anniversary",
+            "estimatedCost": 50,
+            "notes": "Include photos from our trips"
+          }
+        ]
+      }
+    },
+    {
+      "filename": "memories.json",
+      "description": "Preserve special memories and moments",
+      "requiredFor": ["preserve-special-memories", "track-relationship-evolution"],
+      "priority": "medium",
+      "suggestedStructure": {
+        "memories": [
+          {
+            "id": "memory-001",
+            "date": "2025-03-20",
+            "description": "Watched sunset from the hill",
+            "type": "romantic",
+            "photos": ["sunset1.jpg", "sunset2.jpg"],
+            "quotes": ["This is perfect"],
+            "significance": "high"
+          }
+        ]
+      }
+    },
+    {
+      "filename": "reflections.json",
+      "description": "Personal reflections on relationship over time",
+      "requiredFor": ["track-relationship-evolution"],
+      "priority": "low",
+      "suggestedStructure": {
+        "reflections": [
+          {
+            "id": "reflection-001",
+            "date": "2025-04-01",
+            "insights": "We've learned to communicate more openly",
+            "gratitude": "Grateful for their patience",
+            "growth": "Both becoming better listeners"
+          }
+        ]
+      }
+    },
+    {
+      "filename": "communication.json",
+      "description": "Track communication patterns and quality",
+      "requiredFor": ["track-communication-patterns"],
+      "priority": "low",
+      "suggestedStructure": {
+        "frequency": "daily",
+        "qualityTime": [
+          {
+            "date": "2025-05-01",
+            "duration": "3 hours",
+            "type": "in-person",
+            "quality": "excellent"
+          }
+        ],
+        "strengths": ["active listening", "emotional openness"],
+        "challenges": ["sometimes misunderstand texts"],
+        "improvements": ["video calls when complex topics arise"]
+      }
+    }
+  ],
+  "metadata": {
+    "purpose": "Document what questions the romance tracking data must answer, for whom, and how well current data satisfies those needs",
+    "usage": "Use this file to:\n1. Validate data structure design (does it answer key questions?)\n2. Identify missing data or capabilities\n3. Prioritize which data structures to create first\n4. Guide thoughtful relationship tracking and reflection\n5. Ensure all tracking serves meaningful purposes",
+    "storyFields": {
+      "persona": "Who needs this capability (from personas object)",
+      "story": "User story in format: As [persona], I want [goal], so that [reason]",
+      "questions": "Specific questions this story enables answering",
+      "acceptanceCriteria": "What defines 'done' for this capability",
+      "requiredData": "Which files and fields are needed",
+      "currentlySatisfied": "Can the current data structures answer this? (boolean)",
+      "gaps": "What's missing to fully satisfy this story",
+      "implementation": "How to actually query/use the data to answer the questions",
+      "priority": "critical | high | medium | low"
+    }
+  }
+}
